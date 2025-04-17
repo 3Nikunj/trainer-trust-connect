@@ -25,6 +25,9 @@ export type Job = {
 export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicationCount" | "companyRating">) => {
   try {
     // Using 'any' type to bypass TypeScript limitations with Supabase tables not in types.ts
+    // Add console logging to track insertion process
+    console.log("Attempting to create job with data:", job);
+    
     const { data, error } = await supabase
       .from('jobs' as any)
       .insert({
@@ -32,20 +35,25 @@ export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicatio
         description: job.description,
         company: job.company,
         company_id: job.companyId,
-        location: job.location,
-        location_type: job.locationType,
-        rate: job.rate,
-        rate_type: job.rateType,
-        duration: job.duration,
-        start_date: job.startDate,
-        audience: job.audience,
-        requirements: job.requirements,
-        responsibilities: job.responsibilities,
-        skills: job.skills,
+        location: job.location || "",
+        location_type: job.locationType || "Remote",
+        rate: job.rate || "",
+        rate_type: job.rateType || "",
+        duration: job.duration || "",
+        start_date: job.startDate || "",
+        audience: job.audience || "",
+        requirements: Array.isArray(job.requirements) ? job.requirements : [],
+        responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
+        skills: Array.isArray(job.skills) ? job.skills : []
       })
       .select();
     
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error creating job:", error);
+      throw error;
+    }
+    
+    console.log("Job created successfully:", data);
     return { success: true, data };
   } catch (error) {
     console.error("Error creating job:", error);
