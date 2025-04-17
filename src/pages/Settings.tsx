@@ -1,0 +1,492 @@
+
+import { useContext, useState } from "react";
+import { UserContext } from "@/App";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserNav } from "@/components/shared/UserNav";
+import { MainNav } from "@/components/shared/MainNav";
+import { useToast } from "@/components/ui/use-toast";
+
+const Settings = () => {
+  const { user } = useContext(UserContext);
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("profile");
+  
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || "",
+    email: user?.email || "",
+    title: "",
+    bio: "",
+    location: "",
+    website: ""
+  });
+  
+  const [notificationSettings, setNotificationSettings] = useState({
+    email: {
+      messages: true,
+      applications: true,
+      reviews: true,
+      systemUpdates: false
+    },
+    inApp: {
+      messages: true,
+      applications: true,
+      reviews: true,
+      systemUpdates: true
+    }
+  });
+  
+  const [securityForm, setSecurityForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setProfileForm({ ...profileForm, [name]: value });
+  };
+  
+  const handleNotificationChange = (category: string, type: 'email' | 'inApp', checked: boolean) => {
+    setNotificationSettings({
+      ...notificationSettings,
+      [type]: {
+        ...notificationSettings[type],
+        [category]: checked
+      }
+    });
+  };
+  
+  const handleSecurityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setSecurityForm({ ...securityForm, [name]: value });
+  };
+  
+  const handleSaveProfile = () => {
+    toast({
+      title: "Profile updated",
+      description: "Your profile changes have been saved."
+    });
+  };
+  
+  const handleSaveNotifications = () => {
+    toast({
+      title: "Notification preferences updated",
+      description: "Your notification settings have been saved."
+    });
+  };
+  
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (securityForm.newPassword !== securityForm.confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Passwords do not match",
+        description: "New password and confirmation password must match."
+      });
+      return;
+    }
+    
+    toast({
+      title: "Password updated",
+      description: "Your password has been successfully changed."
+    });
+    
+    setSecurityForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: ""
+    });
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center">
+          <MainNav />
+          <div className="ml-auto flex items-center space-x-4">
+            <UserNav />
+          </div>
+        </div>
+      </header>
+      <main className="flex-1">
+        <div className="container py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold">Account Settings</h1>
+              <p className="text-muted-foreground">
+                Manage your account preferences and settings
+              </p>
+            </div>
+            
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex mb-2">
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
+              </TabsList>
+              
+              {/* Profile Settings */}
+              <TabsContent value="profile" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Public Profile</CardTitle>
+                    <CardDescription>
+                      This information will be shown publicly on your profile page
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                      <Avatar className="h-24 w-24">
+                        <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name || "User"} />
+                        <AvatarFallback>
+                          {user?.name?.slice(0, 2).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button variant="outline">Change</Button>
+                        <Button variant="outline">Remove</Button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={profileForm.name}
+                          onChange={handleProfileChange}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={profileForm.email}
+                          onChange={handleProfileChange}
+                          disabled
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="title">Title / Position</Label>
+                        <Input
+                          id="title"
+                          name="title"
+                          placeholder="e.g., Frontend Development Trainer"
+                          value={profileForm.title}
+                          onChange={handleProfileChange}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="location">Location</Label>
+                        <Input
+                          id="location"
+                          name="location"
+                          placeholder="e.g., San Francisco, CA"
+                          value={profileForm.location}
+                          onChange={handleProfileChange}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="website">Website</Label>
+                        <Input
+                          id="website"
+                          name="website"
+                          placeholder="https://yourwebsite.com"
+                          value={profileForm.website}
+                          onChange={handleProfileChange}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="bio">Bio</Label>
+                        <Textarea
+                          id="bio"
+                          name="bio"
+                          placeholder="Write a short bio about yourself..."
+                          value={profileForm.bio}
+                          onChange={handleProfileChange}
+                          className="min-h-32"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="justify-end">
+                    <Button 
+                      className="bg-brand-600 hover:bg-brand-700"
+                      onClick={handleSaveProfile}
+                    >
+                      Save Changes
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                {user?.role === "trainer" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Skills & Expertise</CardTitle>
+                      <CardDescription>
+                        Manage your skills, certifications, and experience
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Coming soon: Add and manage your skills, certifications, and expertise.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {user?.role === "company" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Company Information</CardTitle>
+                      <CardDescription>
+                        Manage your company details and specializations
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Coming soon: Add and manage your company details and specializations.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+              
+              {/* Notification Settings */}
+              <TabsContent value="notifications" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Notification Preferences</CardTitle>
+                    <CardDescription>
+                      Choose how and when you want to be notified
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 font-medium text-sm">
+                        <div className="col-span-1">Notification Type</div>
+                        <div className="text-center">Email</div>
+                        <div className="text-center">In-App</div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="grid grid-cols-3 items-center">
+                        <div className="col-span-1">
+                          <p className="text-sm font-medium">Messages</p>
+                          <p className="text-xs text-muted-foreground">When someone sends you a message</p>
+                        </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={notificationSettings.email.messages}
+                            onCheckedChange={(checked) => handleNotificationChange('messages', 'email', checked)}
+                          />
+                        </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={notificationSettings.inApp.messages}
+                            onCheckedChange={(checked) => handleNotificationChange('messages', 'inApp', checked)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="grid grid-cols-3 items-center">
+                        <div className="col-span-1">
+                          <p className="text-sm font-medium">Applications</p>
+                          <p className="text-xs text-muted-foreground">
+                            {user?.role === "trainer" ? "Updates on your job applications" : "When someone applies to your job"}
+                          </p>
+                        </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={notificationSettings.email.applications}
+                            onCheckedChange={(checked) => handleNotificationChange('applications', 'email', checked)}
+                          />
+                        </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={notificationSettings.inApp.applications}
+                            onCheckedChange={(checked) => handleNotificationChange('applications', 'inApp', checked)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="grid grid-cols-3 items-center">
+                        <div className="col-span-1">
+                          <p className="text-sm font-medium">Reviews</p>
+                          <p className="text-xs text-muted-foreground">When you receive a new review</p>
+                        </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={notificationSettings.email.reviews}
+                            onCheckedChange={(checked) => handleNotificationChange('reviews', 'email', checked)}
+                          />
+                        </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={notificationSettings.inApp.reviews}
+                            onCheckedChange={(checked) => handleNotificationChange('reviews', 'inApp', checked)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="grid grid-cols-3 items-center">
+                        <div className="col-span-1">
+                          <p className="text-sm font-medium">System Updates</p>
+                          <p className="text-xs text-muted-foreground">Platform announcements and updates</p>
+                        </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={notificationSettings.email.systemUpdates}
+                            onCheckedChange={(checked) => handleNotificationChange('systemUpdates', 'email', checked)}
+                          />
+                        </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={notificationSettings.inApp.systemUpdates}
+                            onCheckedChange={(checked) => handleNotificationChange('systemUpdates', 'inApp', checked)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="justify-end">
+                    <Button 
+                      className="bg-brand-600 hover:bg-brand-700"
+                      onClick={handleSaveNotifications}
+                    >
+                      Save Preferences
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              {/* Security Settings */}
+              <TabsContent value="security" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Change Password</CardTitle>
+                    <CardDescription>
+                      Update your password to maintain account security
+                    </CardDescription>
+                  </CardHeader>
+                  <form onSubmit={handleChangePassword}>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="currentPassword">Current Password</Label>
+                        <Input
+                          id="currentPassword"
+                          name="currentPassword"
+                          type="password"
+                          value={securityForm.currentPassword}
+                          onChange={handleSecurityChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="newPassword">New Password</Label>
+                        <Input
+                          id="newPassword"
+                          name="newPassword"
+                          type="password"
+                          value={securityForm.newPassword}
+                          onChange={handleSecurityChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type="password"
+                          value={securityForm.confirmPassword}
+                          onChange={handleSecurityChange}
+                          required
+                        />
+                      </div>
+                    </CardContent>
+                    <CardFooter className="justify-end">
+                      <Button 
+                        type="submit"
+                        className="bg-brand-600 hover:bg-brand-700"
+                      >
+                        Change Password
+                      </Button>
+                    </CardFooter>
+                  </form>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Two-Factor Authentication</CardTitle>
+                    <CardDescription>
+                      Add an extra layer of security to your account
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm">Two-factor authentication is not enabled yet.</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Add a phone number to enable two-factor authentication.
+                        </p>
+                      </div>
+                      <Button variant="outline">Enable 2FA</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Account Deletion</CardTitle>
+                    <CardDescription>
+                      Permanently delete your account and all data
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Once you delete your account, there is no going back. Please be certain.
+                        </p>
+                      </div>
+                      <Button variant="destructive">Delete Account</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Settings;
