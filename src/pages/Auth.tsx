@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,9 @@ import { UserContext } from "@/App";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "register" ? "register" : "login";
+  const [activeTab, setActiveTab] = useState<"login" | "register">(initialTab as "login" | "register");
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useContext(UserContext);

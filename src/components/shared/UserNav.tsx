@@ -1,3 +1,4 @@
+
 import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "@/App";
@@ -13,6 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User, Settings, CreditCard, MessageSquare, Star } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth";
 
 export function UserNav() {
   const { user, setUser } = useContext(UserContext);
@@ -20,7 +23,7 @@ export function UserNav() {
   
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       setUser(null);
       navigate("/");
     } catch (error) {
