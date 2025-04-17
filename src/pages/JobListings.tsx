@@ -1,4 +1,5 @@
-import { useContext, useState } from "react";
+
+import { useContext, useState, useEffect } from "react";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,99 +10,46 @@ import { Separator } from "@/components/ui/separator";
 import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { Briefcase, Calendar, Clock, MapPin, Search, Filter, Star } from "lucide-react";
-
-// Mock job listings data
-const jobListings = [
-  {
-    id: "job1",
-    title: "React Advanced Workshop Trainer",
-    company: "TechLearn Solutions",
-    companyId: "company456",
-    location: "Remote",
-    locationType: "Remote",
-    rate: "$2,000 per day",
-    rateType: "Fixed",
-    duration: "3 days",
-    startDate: "Flexible",
-    description: "We're looking for an experienced React trainer to lead a 3-day advanced workshop for our development team. Topics should include hooks, context, performance optimization, and integration with backends.",
-    requirements: ["5+ years React experience", "Previous training experience", "Strong communication skills"],
-    skills: ["React", "JavaScript", "Redux", "Performance Optimization"],
-    postedDate: "2 days ago",
-    applicationCount: 4,
-    companyRating: 4.8
-  },
-  {
-    id: "job2",
-    title: "DevOps Best Practices Training",
-    company: "Enterprise Cloud Solutions",
-    companyId: "company789",
-    location: "San Francisco, CA",
-    locationType: "On-site",
-    rate: "$15,000",
-    rateType: "Fixed",
-    duration: "2 weeks",
-    startDate: "Jun 15, 2023",
-    description: "Seeking a DevOps trainer to conduct a comprehensive 2-week training program for our engineering team. Focus areas include CI/CD pipelines, infrastructure as code, monitoring, and cloud architecture.",
-    requirements: ["DevOps expert", "AWS certification", "Training experience"],
-    skills: ["AWS", "Docker", "Kubernetes", "Terraform", "CI/CD"],
-    postedDate: "1 week ago",
-    applicationCount: 7,
-    companyRating: 4.5
-  },
-  {
-    id: "job3",
-    title: "Data Science Fundamentals Course",
-    company: "Analytics Academy",
-    companyId: "company101",
-    location: "Boston, MA",
-    locationType: "Hybrid",
-    rate: "$150 per hour",
-    rateType: "Hourly",
-    duration: "4 weeks (part-time)",
-    startDate: "Jul 10, 2023",
-    description: "Analytics Academy is looking for a Data Science trainer to teach fundamentals to business analysts. Course will cover Python, data manipulation, visualization, and basic machine learning concepts.",
-    requirements: ["Data Science background", "Teaching experience", "Python expertise"],
-    skills: ["Python", "Data Analysis", "Machine Learning", "Statistics"],
-    postedDate: "3 days ago",
-    applicationCount: 12,
-    companyRating: 4.2
-  },
-  {
-    id: "job4",
-    title: "Azure Cloud Architecture Workshop",
-    company: "Microsoft Learning Partner",
-    companyId: "company202",
-    location: "Remote",
-    locationType: "Remote",
-    rate: "$5,000",
-    rateType: "Fixed",
-    duration: "5 days",
-    startDate: "Next month",
-    description: "Authorized Microsoft Learning Partner seeking a certified Azure trainer to deliver a 5-day workshop on cloud architecture, security, and governance for enterprise customers.",
-    requirements: ["Microsoft Certified Trainer", "Azure Solutions Architect certification", "Enterprise training experience"],
-    skills: ["Azure", "Cloud Architecture", "Security", "Governance"],
-    postedDate: "5 days ago",
-    applicationCount: 3,
-    companyRating: 4.9
-  }
-];
+import { getJobs, type Job } from "@/lib/jobs";
 
 const JobListings = () => {
   const { user } = useContext(UserContext);
   const [searchTerm, setSearchTerm] = useState("");
   const [locationType, setLocationType] = useState<string>("");
   const [duration, setDuration] = useState<string>("");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const loadJobs = async () => {
+      setLoading(true);
+      try {
+        const isCompany = user?.role === "company";
+        const fetchedJobs = await getJobs(isCompany, user?.id);
+        setJobs(fetchedJobs);
+      } catch (error) {
+        console.error("Error loading jobs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadJobs();
+  }, [user]);
   
   // Filter jobs based on search and filters
-  const filteredJobs = jobListings.filter(job => {
+  const filteredJobs = jobs.filter(job => {
     const matchesSearch = !searchTerm || 
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
       job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesLocationType = !locationType || job.locationType === locationType;
+    const matchesLocationType = !locationType || locationType === "all" || job.locationType === locationType;
     
-    const matchesDuration = !duration || job.duration.includes(duration);
+    const matchesDuration = !duration || duration === "any" || 
+      (duration === "day" && job.duration.includes("day")) ||
+      (duration === "week" && job.duration.includes("week")) ||
+      (duration === "month" && job.duration.includes("month"));
     
     return matchesSearch && matchesLocationType && matchesDuration;
   });
@@ -120,8 +68,14 @@ const JobListings = () => {
         <div className="container py-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Find Training Opportunities</h1>
-              <p className="text-muted-foreground">Browse available training jobs that match your expertise</p>
+              <h1 className="text-3xl font-bold">
+                {user?.role === "company" ? "My Job Listings" : "Find Training Opportunities"}
+              </h1>
+              <p className="text-muted-foreground">
+                {user?.role === "company" 
+                  ? "Manage your posted training opportunities" 
+                  : "Browse available training jobs that match your expertise"}
+              </p>
             </div>
             {user?.role === "company" && (
               <Button className="bg-brand-600 hover:bg-brand-700" asChild>
@@ -176,7 +130,11 @@ const JobListings = () => {
           {/* Results count */}
           <div className="flex justify-between items-center mb-6">
             <p className="text-sm text-muted-foreground">
-              Showing <span className="font-medium">{filteredJobs.length}</span> jobs
+              {loading ? (
+                "Loading jobs..."
+              ) : (
+                <>Showing <span className="font-medium">{filteredJobs.length}</span> jobs</>
+              )}
             </p>
             <Button variant="ghost" size="sm" className="flex items-center">
               <Filter className="h-4 w-4 mr-2" />
@@ -186,7 +144,12 @@ const JobListings = () => {
           
           {/* Job Listings */}
           <div className="space-y-6">
-            {filteredJobs.length > 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+                <p className="mt-4">Loading jobs...</p>
+              </div>
+            ) : filteredJobs.length > 0 ? (
               filteredJobs.map((job) => (
                 <Card key={job.id} className="overflow-hidden">
                   <CardHeader className="pb-4">

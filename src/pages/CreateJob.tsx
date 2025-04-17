@@ -13,6 +13,7 @@ import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { X, PlusCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { createJob } from "@/lib/jobs";
 
 const CreateJob = () => {
   const { user } = useContext(UserContext);
@@ -43,6 +44,7 @@ const CreateJob = () => {
   
   const [skills, setSkills] = useState<string[]>([]);
   const [currentSkill, setCurrentSkill] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -80,7 +82,7 @@ const CreateJob = () => {
     setSkills(skills.filter(s => s !== skill));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.title || !formData.description || !formData.locationType) {
@@ -92,12 +94,51 @@ const CreateJob = () => {
       return;
     }
     
-    toast({
-      title: "Job created",
-      description: "Your job listing has been successfully created."
-    });
-    
-    navigate("/jobs");
+    try {
+      setIsSubmitting(true);
+      
+      const requirements = formData.requirements.filter(req => req.trim() !== "");
+      const responsibilities = formData.responsibilities.filter(resp => resp.trim() !== "");
+      
+      const jobData = {
+        title: formData.title,
+        description: formData.description,
+        company: user.name || "Company Name",
+        companyId: user.id,
+        location: formData.location || (formData.locationType === "Remote" ? "Remote" : ""),
+        locationType: formData.locationType,
+        rate: formData.rate,
+        rateType: formData.rateType,
+        duration: formData.duration,
+        startDate: formData.startDate,
+        audience: formData.audience,
+        requirements,
+        responsibilities,
+        skills
+      };
+      
+      const result = await createJob(jobData);
+      
+      if (result.success) {
+        toast({
+          title: "Job created",
+          description: "Your job listing has been successfully created."
+        });
+        
+        navigate("/jobs");
+      } else {
+        throw new Error("Failed to create job");
+      }
+    } catch (error) {
+      console.error("Error submitting job:", error);
+      toast({
+        variant: "destructive",
+        title: "Error creating job",
+        description: "There was an error creating your job listing. Please try again."
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -390,11 +431,16 @@ const CreateJob = () => {
                   type="button"
                   variant="outline"
                   onClick={() => navigate("/jobs")}
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-brand-600 hover:bg-brand-700">
-                  Create Job Listing
+                <Button 
+                  type="submit" 
+                  className="bg-brand-600 hover:bg-brand-700"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Creating..." : "Create Job Listing"}
                 </Button>
               </div>
             </form>
