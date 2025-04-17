@@ -50,7 +50,7 @@ export function UserNav() {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
             <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
-            <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{user.name ? user.name.slice(0, 2).toUpperCase() : "U"}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -65,35 +65,25 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <a href="/dashboard">
-              <User className="mr-2 h-4 w-4" />
-              <span>Dashboard</span>
-            </a>
+          <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+            <User className="mr-2 h-4 w-4" />
+            <span>Dashboard</span>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <a href={`/profile/${user.id}`}>
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </a>
+          <DropdownMenuItem onClick={() => navigate(`/profile/${user.id}`)}>
+            <User className="mr-2 h-4 w-4" />
+            <span>Profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <a href="/messages">
-              <MessageSquare className="mr-2 h-4 w-4" />
-              <span>Messages</span>
-            </a>
+          <DropdownMenuItem onClick={() => navigate("/messages")}>
+            <MessageSquare className="mr-2 h-4 w-4" />
+            <span>Messages</span>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <a href="/reviews">
-              <Star className="mr-2 h-4 w-4" />
-              <span>Reviews</span>
-            </a>
+          <DropdownMenuItem onClick={() => navigate("/reviews")}>
+            <Star className="mr-2 h-4 w-4" />
+            <span>Reviews</span>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <a href="/settings">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </a>
+          <DropdownMenuItem onClick={() => navigate("/settings")}>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Settings</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

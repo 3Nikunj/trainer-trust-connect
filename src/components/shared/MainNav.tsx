@@ -41,7 +41,7 @@ export function MainNav({
             Dashboard
           </Link>
           <Link
-            to="/jobs"
+            to={user.role === "trainer" ? "/jobs" : "/jobs"}
             className={cn(
               "text-sm font-medium transition-colors hover:text-primary",
               isActive("/jobs") || location.pathname.startsWith("/jobs/")
@@ -51,6 +51,19 @@ export function MainNav({
           >
             {user.role === "trainer" ? "Find Jobs" : "My Jobs"}
           </Link>
+          {user.role === "company" && (
+            <Link
+              to="/create-job"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                isActive("/create-job")
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+              )}
+            >
+              Post Job
+            </Link>
+          )}
           <Link
             to="/messages"
             className={cn(

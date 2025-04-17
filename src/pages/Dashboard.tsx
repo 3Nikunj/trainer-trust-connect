@@ -1,6 +1,6 @@
 
 import { useContext } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ const Dashboard = () => {
   const { user } = useContext(UserContext);
 
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/auth" />;
   }
 
   return (
@@ -35,8 +35,8 @@ const Dashboard = () => {
               </p>
             </div>
             {user.role === "company" && (
-              <Button className="bg-brand-600 hover:bg-brand-700" size="sm" asChild>
-                <a href="/create-job">Post New Job</a>
+              <Button className="bg-brand-600 hover:bg-brand-700" size="sm">
+                <Link to="/create-job" className="text-white">Post New Job</Link>
               </Button>
             )}
           </div>

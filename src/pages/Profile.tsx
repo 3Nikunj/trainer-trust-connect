@@ -1,6 +1,6 @@
 
 import { useContext, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -124,9 +124,13 @@ const Profile = () => {
   const { user } = useContext(UserContext);
   const [isEditing, setIsEditing] = useState(false);
   
+  if (!user) {
+    return <Navigate to="/auth" />;
+  }
+  
   // Mock profile data based on role
   // In a real app, you would fetch this from your API
-  const profileData: ProfileData = id === "trainer123" ? mockTrainerProfile : mockCompanyProfile;
+  const profileData: ProfileData = user.role === "trainer" ? mockTrainerProfile : mockCompanyProfile;
   const isOwnProfile = user?.id === profileData.id;
   const isTrainer = profileData.role === "trainer";
 

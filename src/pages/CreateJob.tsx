@@ -1,6 +1,5 @@
-
 import { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +18,14 @@ const CreateJob = () => {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  if (!user) {
+    return <Navigate to="/auth" />;
+  }
+  
+  if (user.role !== "company") {
+    return <Navigate to="/dashboard" />;
+  }
   
   const [formData, setFormData] = useState({
     title: "",
@@ -76,7 +83,6 @@ const CreateJob = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required fields
     if (!formData.title || !formData.description || !formData.locationType) {
       toast({
         variant: "destructive",
@@ -86,7 +92,6 @@ const CreateJob = () => {
       return;
     }
     
-    // In a real app, submit to your API
     toast({
       title: "Job created",
       description: "Your job listing has been successfully created."
@@ -114,7 +119,6 @@ const CreateJob = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Basic Info Section */}
               <Card>
                 <CardContent className="pt-6">
                   <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
@@ -178,7 +182,6 @@ const CreateJob = () => {
                 </CardContent>
               </Card>
               
-              {/* Details Section */}
               <Card>
                 <CardContent className="pt-6">
                   <h2 className="text-xl font-semibold mb-4">Job Details</h2>
@@ -252,7 +255,6 @@ const CreateJob = () => {
                 </CardContent>
               </Card>
               
-              {/* Skills Section */}
               <Card>
                 <CardContent className="pt-6">
                   <h2 className="text-xl font-semibold mb-4">Required Skills</h2>
@@ -299,7 +301,6 @@ const CreateJob = () => {
                 </CardContent>
               </Card>
               
-              {/* Requirements Section */}
               <Card>
                 <CardContent className="pt-6">
                   <h2 className="text-xl font-semibold mb-4">Requirements & Responsibilities</h2>
@@ -384,7 +385,6 @@ const CreateJob = () => {
                 </CardContent>
               </Card>
               
-              {/* Submit Section */}
               <div className="flex justify-end gap-4">
                 <Button
                   type="button"

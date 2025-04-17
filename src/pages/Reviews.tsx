@@ -1,5 +1,6 @@
 
 import { useContext, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,6 +93,10 @@ const RatingStars = ({ rating }: { rating: number }) => {
 const Reviews = () => {
   const { user } = useContext(UserContext);
   const [activeTab, setActiveTab] = useState("received");
+  
+  if (!user) {
+    return <Navigate to="/auth" />;
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
