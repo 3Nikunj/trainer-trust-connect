@@ -24,22 +24,26 @@ export type Job = {
 
 export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicationCount" | "companyRating">) => {
   try {
-    const { data, error } = await supabase.from("jobs").insert({
-      title: job.title,
-      description: job.description,
-      company: job.company,
-      company_id: job.companyId,
-      location: job.location,
-      location_type: job.locationType,
-      rate: job.rate,
-      rate_type: job.rateType,
-      duration: job.duration,
-      start_date: job.startDate,
-      audience: job.audience,
-      requirements: job.requirements,
-      responsibilities: job.responsibilities,
-      skills: job.skills,
-    }).select();
+    // Using 'any' type to bypass TypeScript limitations with Supabase tables not in types.ts
+    const { data, error } = await supabase
+      .from('jobs' as any)
+      .insert({
+        title: job.title,
+        description: job.description,
+        company: job.company,
+        company_id: job.companyId,
+        location: job.location,
+        location_type: job.locationType,
+        rate: job.rate,
+        rate_type: job.rateType,
+        duration: job.duration,
+        start_date: job.startDate,
+        audience: job.audience,
+        requirements: job.requirements,
+        responsibilities: job.responsibilities,
+        skills: job.skills,
+      })
+      .select();
     
     if (error) throw error;
     return { success: true, data };
@@ -51,7 +55,8 @@ export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicatio
 
 export const getJobs = async (isCompany = false, userId?: string) => {
   try {
-    let query = supabase.from("jobs").select("*");
+    // Using 'any' type to bypass TypeScript limitations with Supabase tables not in types.ts
+    let query = supabase.from('jobs' as any).select('*');
     
     if (isCompany && userId) {
       query = query.eq("company_id", userId);
@@ -61,7 +66,7 @@ export const getJobs = async (isCompany = false, userId?: string) => {
     
     if (error) throw error;
     
-    return data.map(job => ({
+    return data.map((job: any) => ({
       id: job.id,
       title: job.title,
       description: job.description,
@@ -74,9 +79,9 @@ export const getJobs = async (isCompany = false, userId?: string) => {
       duration: job.duration,
       startDate: job.start_date,
       audience: job.audience,
-      requirements: job.requirements,
-      responsibilities: job.responsibilities,
-      skills: job.skills,
+      requirements: job.requirements || [],
+      responsibilities: job.responsibilities || [],
+      skills: job.skills || [],
       postedDate: new Date(job.created_at).toLocaleString(),
       applicationCount: job.application_count || 0,
       companyRating: job.company_rating || 4.5
