@@ -1,4 +1,3 @@
-
 import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "@/App";
@@ -19,19 +18,24 @@ export function UserNav() {
   const { user, setUser } = useContext(UserContext);
   const navigate = useNavigate();
   
-  const handleLogout = () => {
-    setUser(null);
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   if (!user) {
     return (
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <a href="/login">Log in</a>
+          <a href="/auth">Log in</a>
         </Button>
         <Button size="sm" className="bg-brand-600 hover:bg-brand-700" asChild>
-          <a href="/register">Sign up</a>
+          <a href="/auth?tab=register">Sign up</a>
         </Button>
       </div>
     );

@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useState, createContext } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useState, createContext, useEffect } from "react";
+import { supabase } from "./integrations/supabase/client";
 
 // Pages
 import Index from "./pages/Index";
@@ -44,6 +45,40 @@ const queryClient = new QueryClient();
 const App = () => {
   const [user, setUser] = useState<UserType>(null);
 
+  useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata.full_name || session.user.email!,
+          role: session.user.user_metadata.role || "trainer",
+          profileComplete: true,
+        });
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata.full_name || session.user.email!,
+          role: session.user.user_metadata.role || "trainer",
+          profileComplete: true,
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <UserContext.Provider value={{ user, setUser }}>
@@ -53,17 +88,43 @@ const App = () => {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile/:id" element={<Profile />} />
-              <Route path="/jobs" element={<JobListings />} />
-              <Route path="/jobs/:id" element={<JobDetail />} />
-              <Route path="/create-job" element={<CreateJob />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/messages/:id" element={<ChatRoom />} />
-              <Route path="/reviews" element={<Reviews />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route
+                path="/dashboard"
+                element={user ? <Dashboard /> : <Navigate to="/auth" replace />}
+              />
+              <Route
+                path="/profile/:id"
+                element={user ? <Profile /> : <Navigate to="/auth" replace />}
+              />
+              <Route
+                path="/jobs"
+                element={user ? <JobListings /> : <Navigate to="/auth" replace />}
+              />
+              <Route
+                path="/jobs/:id"
+                element={user ? <JobDetail /> : <Navigate to="/auth" replace />}
+              />
+              <Route
+                path="/create-job"
+                element={user ? <CreateJob /> : <Navigate to="/auth" replace />}
+              />
+              <Route
+                path="/messages"
+                element={user ? <Messages /> : <Navigate to="/auth" replace />}
+              />
+              <Route
+                path="/messages/:id"
+                element={user ? <ChatRoom /> : <Navigate to="/auth" replace />}
+              />
+              <Route
+                path="/reviews"
+                element={user ? <Reviews /> : <Navigate to="/auth" replace />}
+              />
+              <Route
+                path="/settings"
+                element={user ? <Settings /> : <Navigate to="/auth" replace />}
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
