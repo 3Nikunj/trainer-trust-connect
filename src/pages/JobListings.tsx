@@ -1,4 +1,3 @@
-
 import { useContext, useState } from "react";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -151,7 +150,7 @@ const JobListings = () => {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All locations</SelectItem>
+                <SelectItem value="all">All locations</SelectItem>
                 <SelectItem value="Remote">Remote</SelectItem>
                 <SelectItem value="On-site">On-site</SelectItem>
                 <SelectItem value="Hybrid">Hybrid</SelectItem>
@@ -166,7 +165,7 @@ const JobListings = () => {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any duration</SelectItem>
+                <SelectItem value="any">Any duration</SelectItem>
                 <SelectItem value="day">1-5 days</SelectItem>
                 <SelectItem value="week">1-4 weeks</SelectItem>
                 <SelectItem value="month">1+ months</SelectItem>
