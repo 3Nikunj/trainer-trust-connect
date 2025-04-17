@@ -114,117 +114,117 @@ const Auth = () => {
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
+              
+              <TabsContent value="login">
+                <form onSubmit={handleLogin}>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Email</Label>
+                      <Input
+                        id="login-email"
+                        type="email"
+                        value={loginForm.email}
+                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Password</Label>
+                      <Input
+                        id="login-password"
+                        type="password"
+                        value={loginForm.password}
+                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-brand-600 hover:bg-brand-700"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Signing in..." : "Sign in"}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="register">
+                <form onSubmit={handleRegister}>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="register-email">Email</Label>
+                      <Input
+                        id="register-email"
+                        type="email"
+                        value={registerForm.email}
+                        onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-fullname">Full Name</Label>
+                      <Input
+                        id="register-fullname"
+                        type="text"
+                        value={registerForm.fullName}
+                        onChange={(e) => setRegisterForm({ ...registerForm, fullName: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Account Type</Label>
+                      <RadioGroup 
+                        value={registerForm.role}
+                        onValueChange={(value) => setRegisterForm({ ...registerForm, role: value as "trainer" | "company" })}
+                        className="flex space-x-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="trainer" id="trainer" />
+                          <Label htmlFor="trainer">Trainer</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="company" id="company" />
+                          <Label htmlFor="company">Company</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-password">Password</Label>
+                      <Input
+                        id="register-password"
+                        type="password"
+                        value={registerForm.password}
+                        onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-confirm-password">Confirm Password</Label>
+                      <Input
+                        id="register-confirm-password"
+                        type="password"
+                        value={registerForm.confirmPassword}
+                        onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-brand-600 hover:bg-brand-700"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Creating account..." : "Create account"}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </TabsContent>
             </Tabs>
           </CardHeader>
-
-          <TabsContent value="login">
-            <form onSubmit={handleLogin}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    value={loginForm.email}
-                    onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                    required
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-brand-600 hover:bg-brand-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Signing in..." : "Sign in"}
-                </Button>
-              </CardFooter>
-            </form>
-          </TabsContent>
-
-          <TabsContent value="register">
-            <form onSubmit={handleRegister}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="register-email">Email</Label>
-                  <Input
-                    id="register-email"
-                    type="email"
-                    value={registerForm.email}
-                    onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-fullname">Full Name</Label>
-                  <Input
-                    id="register-fullname"
-                    type="text"
-                    value={registerForm.fullName}
-                    onChange={(e) => setRegisterForm({ ...registerForm, fullName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Account Type</Label>
-                  <RadioGroup 
-                    value={registerForm.role}
-                    onValueChange={(value) => setRegisterForm({ ...registerForm, role: value as "trainer" | "company" })}
-                    className="flex space-x-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="trainer" id="trainer" />
-                      <Label htmlFor="trainer">Trainer</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="company" id="company" />
-                      <Label htmlFor="company">Company</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-password">Password</Label>
-                  <Input
-                    id="register-password"
-                    type="password"
-                    value={registerForm.password}
-                    onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-confirm-password">Confirm Password</Label>
-                  <Input
-                    id="register-confirm-password"
-                    type="password"
-                    value={registerForm.confirmPassword}
-                    onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
-                    required
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-brand-600 hover:bg-brand-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Creating account..." : "Create account"}
-                </Button>
-              </CardFooter>
-            </form>
-          </TabsContent>
         </Card>
       </div>
     </div>
