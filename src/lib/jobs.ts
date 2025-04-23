@@ -27,8 +27,9 @@ export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicatio
     // Add console logging to track insertion process
     console.log("Attempting to create job with data:", job);
     
-    const { data, error } = await supabase
-      .from('jobs')
+    // Use type assertion to bypass TypeScript limitations with tables not defined in types.ts
+    const { data, error } = await (supabase
+      .from('jobs') as any)
       .insert({
         title: job.title,
         description: job.description,
@@ -62,7 +63,8 @@ export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicatio
 
 export const getJobs = async (isCompany = false, userId?: string) => {
   try {
-    let query = supabase.from('jobs').select('*');
+    // Use type assertion to bypass TypeScript limitations with tables not defined in types.ts
+    let query = (supabase.from('jobs') as any).select('*');
     
     if (isCompany && userId) {
       query = query.eq("company_id", userId);
