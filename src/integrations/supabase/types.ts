@@ -9,6 +9,72 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      jobs: {
+        Row: {
+          application_count: number | null
+          audience: string | null
+          company: string
+          company_id: string
+          company_rating: number | null
+          created_at: string | null
+          description: string
+          duration: string | null
+          id: string
+          location: string | null
+          location_type: string | null
+          rate: string | null
+          rate_type: string | null
+          requirements: string[] | null
+          responsibilities: string[] | null
+          skills: string[] | null
+          start_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          application_count?: number | null
+          audience?: string | null
+          company: string
+          company_id: string
+          company_rating?: number | null
+          created_at?: string | null
+          description: string
+          duration?: string | null
+          id?: string
+          location?: string | null
+          location_type?: string | null
+          rate?: string | null
+          rate_type?: string | null
+          requirements?: string[] | null
+          responsibilities?: string[] | null
+          skills?: string[] | null
+          start_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          application_count?: number | null
+          audience?: string | null
+          company?: string
+          company_id?: string
+          company_rating?: number | null
+          created_at?: string | null
+          description?: string
+          duration?: string | null
+          id?: string
+          location?: string | null
+          location_type?: string | null
+          rate?: string | null
+          rate_type?: string | null
+          requirements?: string[] | null
+          responsibilities?: string[] | null
+          skills?: string[] | null
+          start_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

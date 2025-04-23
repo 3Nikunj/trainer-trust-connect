@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
-import { Briefcase, Calendar, Clock, MapPin, Users, Star, CheckCircle, AlertCircle, BookOpen } from "lucide-react";
+import { Briefcase, Calendar, Clock, MapPin, Users, Star, AlertCircle, BookOpen, CheckCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Job } from "@/lib/jobs";
 
 const jobData = {
   id: "job1",
