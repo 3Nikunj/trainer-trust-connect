@@ -60,15 +60,21 @@ const JobDetail = () => {
   useEffect(() => {
     const fetchJobDetail = async () => {
       try {
-        const { data, error } = await supabase
-          .from('jobs' as any)
+        if (!id) {
+          throw new Error('Job ID is missing');
+        }
+
+        // Fixed the query to properly handle the response
+        const { data, error: queryError } = await supabase
+          .from('jobs')
           .select('*')
           .eq('id', id)
           .single();
 
-        if (error) throw error;
+        if (queryError) throw queryError;
         if (!data) throw new Error('Job not found');
 
+        // Map the database fields to our Job type
         setJob({
           id: data.id,
           title: data.title,
@@ -162,21 +168,21 @@ const JobDetail = () => {
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h1 className="text-3xl font-bold">{jobData.title}</h1>
+                    <h1 className="text-3xl font-bold">{job.title}</h1>
                     <div className="flex items-center mt-2">
-                      <a href={`/profile/${jobData.companyId}`} className="flex items-center hover:text-brand-600">
+                      <a href={`/profile/${job.companyId}`} className="flex items-center hover:text-brand-600">
                         <Avatar className="h-6 w-6 mr-2">
-                          <AvatarImage src={jobData.companyLogo} alt={jobData.company} />
-                          <AvatarFallback>{jobData.company.slice(0, 2).toUpperCase()}</AvatarFallback>
+                          <AvatarImage src="/placeholder.svg" alt={job.company} />
+                          <AvatarFallback>{job.company.slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
-                        <span className="font-medium">{jobData.company}</span>
+                        <span className="font-medium">{job.company}</span>
                       </a>
                       <div className="flex items-center ml-3 text-amber-500">
                         <Star className="h-4 w-4 fill-amber-500 mr-1" />
-                        <span>{jobData.companyRating}</span>
+                        <span>{job.companyRating}</span>
                       </div>
                       <Badge variant="outline" className="ml-3">
-                        {jobData.locationType}
+                        {job.locationType}
                       </Badge>
                     </div>
                   </div>
@@ -193,42 +199,42 @@ const JobDetail = () => {
                     <MapPin className="h-5 w-5 mr-2 text-brand-600" />
                     <div>
                       <p className="text-sm font-medium">Location</p>
-                      <p className="text-sm text-muted-foreground">{jobData.location}</p>
+                      <p className="text-sm text-muted-foreground">{job.location}</p>
                     </div>
                   </div>
                   <div className="flex items-center">
                     <Calendar className="h-5 w-5 mr-2 text-brand-600" />
                     <div>
                       <p className="text-sm font-medium">Start Date</p>
-                      <p className="text-sm text-muted-foreground">{jobData.startDate}</p>
+                      <p className="text-sm text-muted-foreground">{job.startDate}</p>
                     </div>
                   </div>
                   <div className="flex items-center">
                     <Clock className="h-5 w-5 mr-2 text-brand-600" />
                     <div>
                       <p className="text-sm font-medium">Duration</p>
-                      <p className="text-sm text-muted-foreground">{jobData.duration}</p>
+                      <p className="text-sm text-muted-foreground">{job.duration}</p>
                     </div>
                   </div>
                   <div className="flex items-center">
                     <Briefcase className="h-5 w-5 mr-2 text-brand-600" />
                     <div>
                       <p className="text-sm font-medium">Compensation</p>
-                      <p className="text-sm text-muted-foreground">{jobData.rate}</p>
+                      <p className="text-sm text-muted-foreground">{job.rate}</p>
                     </div>
                   </div>
                   <div className="flex items-center">
                     <Users className="h-5 w-5 mr-2 text-brand-600" />
                     <div>
                       <p className="text-sm font-medium">Audience</p>
-                      <p className="text-sm text-muted-foreground">{jobData.audience}</p>
+                      <p className="text-sm text-muted-foreground">{job.audience}</p>
                     </div>
                   </div>
                   <div className="flex items-center">
                     <BookOpen className="h-5 w-5 mr-2 text-brand-600" />
                     <div>
                       <p className="text-sm font-medium">Applications</p>
-                      <p className="text-sm text-muted-foreground">{jobData.applicationCount} trainers</p>
+                      <p className="text-sm text-muted-foreground">{job.applicationCount} trainers</p>
                     </div>
                   </div>
                 </div>
@@ -248,12 +254,12 @@ const JobDetail = () => {
                       <CardTitle>Job Description</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <p>{jobData.description}</p>
+                      <p>{job.description}</p>
                       
                       <div className="space-y-2">
                         <h3 className="font-semibold">Responsibilities:</h3>
                         <ul className="list-disc pl-5 space-y-1">
-                          {jobData.responsibilities.map((item, index) => (
+                          {job.responsibilities.map((item, index) => (
                             <li key={index} className="text-muted-foreground">{item}</li>
                           ))}
                         </ul>
@@ -261,7 +267,7 @@ const JobDetail = () => {
                       
                       <div className="flex flex-wrap gap-2 pt-4">
                         <h3 className="w-full font-semibold mb-2">Required Skills:</h3>
-                        {jobData.skills.map(skill => (
+                        {job.skills.map(skill => (
                           <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
                         ))}
                       </div>
@@ -276,7 +282,7 @@ const JobDetail = () => {
                     </CardHeader>
                     <CardContent>
                       <ul className="space-y-3">
-                        {jobData.requirements.map((req, index) => (
+                        {job.requirements.map((req, index) => (
                           <li key={index} className="flex items-start">
                             <CheckCircle className="h-5 w-5 mr-2 text-teal-600 flex-shrink-0 mt-0.5" />
                             <span>{req}</span>
@@ -291,21 +297,21 @@ const JobDetail = () => {
                   <Card>
                     <CardHeader className="flex flex-row items-center">
                       <Avatar className="h-10 w-10 mr-3">
-                        <AvatarImage src={jobData.companyLogo} alt={jobData.company} />
-                        <AvatarFallback>{jobData.company.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarImage src="/placeholder.svg" alt={job.company} />
+                        <AvatarFallback>{job.company.slice(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <CardTitle>{jobData.company}</CardTitle>
+                        <CardTitle>{job.company}</CardTitle>
                         <CardDescription className="flex items-center">
                           <Star className="h-3 w-3 fill-amber-500 mr-1" />
-                          <span>{jobData.companyRating} rating</span>
+                          <span>{job.companyRating} rating</span>
                         </CardDescription>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="mb-4">{jobData.aboutCompany}</p>
+                      <p className="mb-4">This company specializes in providing training solutions.</p>
                       <Button variant="outline" asChild>
-                        <a href={`/profile/${jobData.companyId}`}>View Company Profile</a>
+                        <a href={`/profile/${job.companyId}`}>View Company Profile</a>
                       </Button>
                     </CardContent>
                   </Card>
@@ -325,15 +331,11 @@ const JobDetail = () => {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Job Posted</p>
-                    <p className="text-sm text-muted-foreground">{jobData.postedDate}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Application Deadline</p>
-                    <p className="text-sm text-muted-foreground">{jobData.applicationDeadline}</p>
+                    <p className="text-sm text-muted-foreground">{job.postedDate}</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Applications</p>
-                    <p className="text-sm text-muted-foreground">{jobData.applicationCount} trainers have applied</p>
+                    <p className="text-sm text-muted-foreground">{job.applicationCount} trainers have applied</p>
                   </div>
                 </CardContent>
                 {isTrainer ? (
