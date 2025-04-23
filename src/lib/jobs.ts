@@ -24,12 +24,11 @@ export type Job = {
 
 export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicationCount" | "companyRating">) => {
   try {
-    // Using 'any' type to bypass TypeScript limitations with Supabase tables not in types.ts
     // Add console logging to track insertion process
     console.log("Attempting to create job with data:", job);
     
     const { data, error } = await supabase
-      .from('jobs' as any)
+      .from('jobs')
       .insert({
         title: job.title,
         description: job.description,
@@ -63,8 +62,7 @@ export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicatio
 
 export const getJobs = async (isCompany = false, userId?: string) => {
   try {
-    // Using 'any' type to bypass TypeScript limitations with Supabase tables not in types.ts
-    let query = supabase.from('jobs' as any).select('*');
+    let query = supabase.from('jobs').select('*');
     
     if (isCompany && userId) {
       query = query.eq("company_id", userId);
