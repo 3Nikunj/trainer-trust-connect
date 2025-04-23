@@ -1,4 +1,3 @@
-
 import { useContext } from "react";
 import { useParams } from "react-router-dom";
 import { UserContext } from "@/App";
@@ -11,7 +10,6 @@ import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { Briefcase, Calendar, Clock, MapPin, Users, Star, CheckCircle, AlertCircle, BookOpen } from "lucide-react";
 
-// Mock job data
 const jobData = {
   id: "job1",
   title: "React Advanced Workshop Trainer",
@@ -53,6 +51,96 @@ const JobDetail = () => {
   const { id } = useParams();
   const { user } = useContext(UserContext);
   const isTrainer = user?.role === "trainer";
+  const [job, setJob] = useState<Job | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchJobDetail = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('jobs' as any)
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        if (!data) throw new Error('Job not found');
+
+        setJob({
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          company: data.company,
+          companyId: data.company_id,
+          location: data.location,
+          locationType: data.location_type,
+          rate: data.rate,
+          rateType: data.rate_type,
+          duration: data.duration,
+          startDate: data.start_date,
+          audience: data.audience,
+          requirements: data.requirements || [],
+          responsibilities: data.responsibilities || [],
+          skills: data.skills || [],
+          postedDate: new Date(data.created_at).toLocaleString(),
+          applicationCount: data.application_count || 0,
+          companyRating: data.company_rating || 4.5
+        });
+      } catch (err) {
+        console.error('Error fetching job:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch job details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchJobDetail();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container flex h-16 items-center">
+            <MainNav />
+            <div className="ml-auto flex items-center space-x-4">
+              <UserNav />
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 flex items-center justify-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error || !job) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container flex h-16 items-center">
+            <MainNav />
+            <div className="ml-auto flex items-center space-x-4">
+              <UserNav />
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Job Not Found</h2>
+            <p className="text-muted-foreground mb-4">{error || 'The requested job could not be found.'}</p>
+            <Button asChild>
+              <a href="/jobs">Back to Jobs</a>
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">

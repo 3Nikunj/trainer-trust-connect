@@ -9,55 +9,10 @@ import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { Search, MessageSquare } from "lucide-react";
 
-// Mock conversation data
-const conversations = [
-  {
-    id: "conv1",
-    user: {
-      id: "trainer123",
-      name: "Alex Johnson",
-      avatar: "/placeholder.svg",
-      online: true
-    },
-    lastMessage: {
-      text: "I'd be interested in discussing the React training opportunity further.",
-      time: "10:42 AM",
-      unread: true
-    }
-  },
-  {
-    id: "conv2",
-    user: {
-      id: "company456",
-      name: "TechLearn Solutions",
-      avatar: "/placeholder.svg",
-      online: false
-    },
-    lastMessage: {
-      text: "Thanks for applying! Can we schedule a call to discuss the training curriculum?",
-      time: "Yesterday",
-      unread: false
-    }
-  },
-  {
-    id: "conv3",
-    user: {
-      id: "trainer789",
-      name: "Maya Rodriguez",
-      avatar: "/placeholder.svg",
-      online: true
-    },
-    lastMessage: {
-      text: "I've attached my sample workshop materials for your review.",
-      time: "Monday",
-      unread: false
-    }
-  }
-];
-
 const Messages = () => {
   const { user } = useContext(UserContext);
   const [searchTerm, setSearchTerm] = useState("");
+  const [conversations, setConversations] = useState([]);
   
   // Filter conversations based on search
   const filteredConversations = conversations.filter(conv => 
@@ -97,61 +52,16 @@ const Messages = () => {
               </div>
             </div>
             
-            {filteredConversations.length > 0 ? (
-              <ScrollArea className="flex-1">
-                <div className="divide-y">
-                  {filteredConversations.map((conv) => (
-                    <a 
-                      key={conv.id}
-                      href={`/messages/${conv.id}`}
-                      className={`flex items-center p-4 hover:bg-muted/40 transition-colors ${conv.lastMessage.unread ? 'bg-muted/20' : ''}`}
-                    >
-                      <div className="relative">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={conv.user.avatar} alt={conv.user.name} />
-                          <AvatarFallback>{conv.user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        {conv.user.online && (
-                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-background" />
-                        )}
-                      </div>
-                      <div className="ml-4 flex-1 flex justify-between min-w-0">
-                        <div className="overflow-hidden">
-                          <p className={`font-medium truncate ${conv.lastMessage.unread ? 'text-foreground' : 'text-muted-foreground'}`}>
-                            {conv.user.name}
-                          </p>
-                          <p className={`text-sm truncate ${conv.lastMessage.unread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                            {conv.lastMessage.text}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end ml-4">
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {conv.lastMessage.time}
-                          </span>
-                          {conv.lastMessage.unread && (
-                            <span className="h-2 w-2 rounded-full bg-brand-600 mt-1" />
-                          )}
-                        </div>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </ScrollArea>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-medium">No conversations found</h3>
-                <p className="text-muted-foreground max-w-md mt-2">
-                  {searchTerm ? 
-                    "No messages matching your search terms." : 
-                    "You don't have any conversations yet. Start connecting with trainers and companies."
-                  }
-                </p>
-                <Button className="mt-6 bg-brand-600 hover:bg-brand-700">
-                  Start a Conversation
-                </Button>
-              </div>
-            )}
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-4" />
+              <h3 className="text-lg font-medium">No conversations yet</h3>
+              <p className="text-muted-foreground max-w-md mt-2">
+                Start connecting with trainers and companies to begin messaging
+              </p>
+              <Button className="mt-6 bg-brand-600 hover:bg-brand-700">
+                Start a Conversation
+              </Button>
+            </div>
           </div>
         </div>
       </main>

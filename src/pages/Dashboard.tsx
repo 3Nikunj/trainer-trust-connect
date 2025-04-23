@@ -1,4 +1,3 @@
-
 import { useContext } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { UserContext } from "@/App";
@@ -7,9 +6,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
+import { useState, useEffect } from "react";
 
 const Dashboard = () => {
   const { user } = useContext(UserContext);
+  const [stats, setStats] = useState({
+    completedJobs: 0,
+    averageRating: 0,
+    unreadMessages: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(false);
+      // Fetch real stats from your database here
+      setStats({
+        completedJobs: 0,
+        averageRating: 0,
+        unreadMessages: 0
+      });
+    };
+
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
 
   if (!user) {
     return <Navigate to="/auth" />;
@@ -77,9 +99,9 @@ const Dashboard = () => {
                     </svg>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">15</div>
+                    <div className="text-2xl font-bold">{stats.completedJobs}</div>
                     <p className="text-xs text-muted-foreground">
-                      +2 since last month
+                      Just getting started
                     </p>
                   </CardContent>
                 </Card>
@@ -104,9 +126,9 @@ const Dashboard = () => {
                     </svg>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">4.8</div>
+                    <div className="text-2xl font-bold">{stats.averageRating}</div>
                     <p className="text-xs text-muted-foreground">
-                      Based on 32 reviews
+                      No reviews yet
                     </p>
                   </CardContent>
                 </Card>
@@ -128,9 +150,9 @@ const Dashboard = () => {
                     </svg>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">3</div>
+                    <div className="text-2xl font-bold">{stats.unreadMessages}</div>
                     <p className="text-xs text-muted-foreground">
-                      New unread messages
+                      No unread messages
                     </p>
                   </CardContent>
                 </Card>
