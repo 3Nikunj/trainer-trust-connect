@@ -1,4 +1,3 @@
-
 import { useContext, useState, useEffect } from "react";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { Briefcase, Calendar, Clock, MapPin, Search, Filter, Star } from "lucide-react";
 import { getJobs, type Job } from "@/lib/jobs";
+import { Link } from "react-router-dom";
 
 const JobListings = () => {
   const { user } = useContext(UserContext);
@@ -37,7 +37,6 @@ const JobListings = () => {
     loadJobs();
   }, [user]);
   
-  // Filter jobs based on search and filters
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = !searchTerm || 
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -79,12 +78,11 @@ const JobListings = () => {
             </div>
             {user?.role === "company" && (
               <Button className="bg-brand-600 hover:bg-brand-700" asChild>
-                <a href="/create-job">Post New Job</a>
+                <Link to="/create-job">Post New Job</Link>
               </Button>
             )}
           </div>
           
-          {/* Search and Filters */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div className="md:col-span-2 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -127,7 +125,6 @@ const JobListings = () => {
             </Select>
           </div>
           
-          {/* Results count */}
           <div className="flex justify-between items-center mb-6">
             <p className="text-sm text-muted-foreground">
               {loading ? (
@@ -142,7 +139,6 @@ const JobListings = () => {
             </Button>
           </div>
           
-          {/* Job Listings */}
           <div className="space-y-6">
             {loading ? (
               <div className="text-center py-12">
@@ -156,14 +152,14 @@ const JobListings = () => {
                     <div className="flex justify-between">
                       <div>
                         <CardTitle className="text-xl">
-                          <a href={`/jobs/${job.id}`} className="hover:text-brand-600 transition-colors">
+                          <Link to={`/jobs/${job.id}`} className="hover:text-brand-600 transition-colors">
                             {job.title}
-                          </a>
+                          </Link>
                         </CardTitle>
                         <CardDescription className="flex items-center mt-1">
-                          <a href={`/profile/${job.companyId}`} className="font-medium text-foreground hover:text-brand-600">
+                          <Link to={`/profile/${job.companyId}`} className="font-medium text-foreground hover:text-brand-600">
                             {job.company}
-                          </a>
+                          </Link>
                           <span className="flex items-center ml-2 text-amber-500">
                             <Star className="h-3 w-3 fill-amber-500 mr-1" />
                             {job.companyRating}
@@ -205,7 +201,7 @@ const JobListings = () => {
                       Posted {job.postedDate} • {job.applicationCount} applications
                     </div>
                     <Button asChild>
-                      <a href={`/jobs/${job.id}`}>View Details</a>
+                      <Link to={`/jobs/${job.id}`}>View Details</Link>
                     </Button>
                   </CardFooter>
                 </Card>
