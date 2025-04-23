@@ -11,6 +11,8 @@ import { MainNav } from "@/components/shared/MainNav";
 import { Briefcase, Calendar, Clock, MapPin, Users, Star, AlertCircle, BookOpen, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Job } from "@/lib/jobs";
+import { applyForJob } from "@/lib/jobs";
+import { useToast } from "@/components/ui/use-toast";
 
 const jobData = {
   id: "job1",
@@ -56,6 +58,9 @@ const JobDetail = () => {
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchJobDetail = async () => {
@@ -64,7 +69,18 @@ const JobDetail = () => {
           throw new Error('Job ID is missing');
         }
 
-        // Fixed the query to properly handle the response
+        // Check if user has already applied
+        if (user) {
+          const { data: application } = await supabase
+            .from('job_applications')
+            .select()
+            .eq('job_id', id)
+            .eq('trainer_id', user.id)
+            .single();
+          
+          setHasApplied(!!application);
+        }
+
         const { data, error: queryError } = await supabase
           .from('jobs')
           .select('*')
@@ -74,7 +90,6 @@ const JobDetail = () => {
         if (queryError) throw queryError;
         if (!data) throw new Error('Job not found');
 
-        // Map the database fields to our Job type
         setJob({
           id: data.id,
           title: data.title,
@@ -106,7 +121,29 @@ const JobDetail = () => {
     if (id) {
       fetchJobDetail();
     }
-  }, [id]);
+  }, [id, user]);
+
+  const handleApply = async () => {
+    if (!job || !user) return;
+    
+    setApplying(true);
+    const result = await applyForJob(job.id);
+    setApplying(false);
+
+    if (result.success) {
+      setHasApplied(true);
+      toast({
+        title: "Application Submitted",
+        description: "Your application has been successfully submitted.",
+      });
+    } else {
+      toast({
+        title: "Application Failed",
+        description: result.error as string,
+        variant: "destructive",
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -340,8 +377,12 @@ const JobDetail = () => {
                 </CardContent>
                 {isTrainer ? (
                   <CardFooter>
-                    <Button className="w-full bg-brand-600 hover:bg-brand-700">
-                      Apply Now
+                    <Button 
+                      className="w-full bg-brand-600 hover:bg-brand-700" 
+                      onClick={handleApply}
+                      disabled={hasApplied || applying}
+                    >
+                      {applying ? "Submitting..." : hasApplied ? "Already Applied" : "Apply Now"}
                     </Button>
                   </CardFooter>
                 ) : (

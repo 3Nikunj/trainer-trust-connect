@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export type Job = {
@@ -24,10 +23,8 @@ export type Job = {
 
 export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicationCount" | "companyRating">) => {
   try {
-    // Add console logging to track insertion process
     console.log("Attempting to create job with data:", job);
     
-    // Fix the type assertion by applying it to the entire chain
     const { data, error } = await supabase
       .from('jobs' as any)
       .insert({
@@ -63,7 +60,6 @@ export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicatio
 
 export const getJobs = async (isCompany = false, userId?: string) => {
   try {
-    // Fix the type assertion by applying it to the entire chain
     let query = supabase
       .from('jobs' as any)
       .select('*');
@@ -99,5 +95,38 @@ export const getJobs = async (isCompany = false, userId?: string) => {
   } catch (error) {
     console.error("Error fetching jobs:", error);
     return [];
+  }
+};
+
+export const applyForJob = async (jobId: string, coverNote?: string) => {
+  try {
+    const { data: existingApplication, error: checkError } = await supabase
+      .from('job_applications')
+      .select()
+      .eq('job_id', jobId)
+      .eq('trainer_id', supabase.auth.getUser().then(({ data }) => data.user?.id))
+      .single();
+
+    if (existingApplication) {
+      return { success: false, error: "You have already applied for this job" };
+    }
+
+    const { data, error } = await supabase
+      .from('job_applications')
+      .insert([
+        {
+          job_id: jobId,
+          trainer_id: (await supabase.auth.getUser()).data.user?.id,
+          cover_note: coverNote,
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error applying for job:", error);
+    return { success: false, error };
   }
 };
