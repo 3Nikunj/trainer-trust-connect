@@ -224,6 +224,20 @@ const Profile = () => {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   
+  // Initialize form regardless of editing state to avoid hooks order issues
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      title: "",
+      bio: "",
+      location: "",
+      companySize: "",
+      website: "",
+      hourlyRate: "",
+      trainingPhilosophy: "",
+    }
+  });
+  
   useEffect(() => {
     // In a real app, you'd fetch the profile data from your API
     // For now, we'll use mock data
@@ -232,11 +246,41 @@ const Profile = () => {
       // Mock fetching profile data based on user role
       const data = user?.role === "trainer" ? mockTrainerProfile : mockCompanyProfile;
       setProfileData(data);
+      
+      // Update form values after profile data is loaded
+      if (data) {
+        const isCompanyProfile = data.role === "company";
+        if (isCompanyProfile) {
+          const companyProfile = data as CompanyProfile;
+          form.reset({
+            name: companyProfile.name,
+            title: companyProfile.title,
+            bio: companyProfile.bio,
+            companySize: companyProfile.companySize,
+            website: companyProfile.website,
+            location: companyProfile.location,
+            trainingPhilosophy: companyProfile.trainingPhilosophy || "",
+          });
+        } else {
+          const trainerProfile = data as TrainerProfile;
+          form.reset({
+            name: trainerProfile.name,
+            title: trainerProfile.title,
+            bio: trainerProfile.bio,
+            hourlyRate: trainerProfile.hourlyRate,
+            location: trainerProfile.location,
+            companySize: "",
+            website: "",
+            trainingPhilosophy: "",
+          });
+        }
+      }
+      
       setLoading(false);
     };
     
     fetchProfile();
-  }, [user]);
+  }, [user, form]);
   
   if (!user) {
     return <Navigate to="/auth" />;
@@ -253,26 +297,6 @@ const Profile = () => {
   const isOwnProfile = user?.id === profileData.id;
   const isTrainer = profileData.role === "trainer";
   const isCompany = profileData.role === "company";
-
-  const form = useForm({
-    defaultValues: {
-      ...(isCompany ? {
-        name: (profileData as CompanyProfile).name,
-        title: (profileData as CompanyProfile).title,
-        bio: (profileData as CompanyProfile).bio,
-        companySize: (profileData as CompanyProfile).companySize,
-        website: (profileData as CompanyProfile).website,
-        location: (profileData as CompanyProfile).location,
-        trainingPhilosophy: (profileData as CompanyProfile).trainingPhilosophy || "",
-      } : {
-        name: (profileData as TrainerProfile).name,
-        title: (profileData as TrainerProfile).title,
-        bio: (profileData as TrainerProfile).bio,
-        hourlyRate: (profileData as TrainerProfile).hourlyRate,
-        location: (profileData as TrainerProfile).location,
-      })
-    }
-  });
 
   return (
     <div className="flex min-h-screen flex-col">
