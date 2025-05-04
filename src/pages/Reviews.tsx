@@ -8,7 +8,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
-import { Star, ThumbsUp, ThumbsDown, MessageSquare, Flag } from "lucide-react";
+import { Star, ThumbsUp, ThumbsDown, MessageSquare, Flag, Info } from "lucide-react";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock review data
 const receivedReviews = [
@@ -74,8 +95,16 @@ const givenReviews = [
   }
 ];
 
+// Mock company data for the dropdown
+const mockCompanies = [
+  { id: "company456", name: "TechLearn Solutions" },
+  { id: "company789", name: "Enterprise Cloud Solutions" },
+  { id: "company101", name: "DataDriven Insights" },
+  { id: "company202", name: "InnoSoft Academy" },
+];
+
 // Rating stars component
-const RatingStars = ({ rating }: { rating: number }) => {
+const RatingStars = ({ rating, onRatingChange }: { rating: number, onRatingChange?: (rating: number) => void }) => {
   return (
     <div className="flex">
       {[1, 2, 3, 4, 5].map((star) => (
@@ -83,20 +112,117 @@ const RatingStars = ({ rating }: { rating: number }) => {
           key={star}
           className={`h-4 w-4 ${
             star <= rating ? "text-amber-500 fill-amber-500" : "text-gray-300"
-          }`}
+          } ${onRatingChange ? "cursor-pointer" : ""}`}
+          onClick={() => onRatingChange && onRatingChange(star)}
         />
       ))}
     </div>
   );
 };
 
+// Review form type
+type ReviewFormValues = {
+  companyId: string;
+  jobTitle: string;
+  review: string;
+  rating: number;
+  categories: {
+    communication: number;
+    requirements: number;
+    support: number;
+    professionalism: number;
+    payment: number;
+  };
+};
+
 const Reviews = () => {
   const { user } = useContext(UserContext);
   const [activeTab, setActiveTab] = useState("received");
+  const [selectedCompany, setSelectedCompany] = useState("");
+  const [formRating, setFormRating] = useState(0);
+  const [formCategories, setFormCategories] = useState({
+    communication: 0,
+    requirements: 0,
+    support: 0,
+    professionalism: 0,
+    payment: 0,
+  });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
+  
+  const form = useForm<ReviewFormValues>({
+    defaultValues: {
+      companyId: "",
+      jobTitle: "",
+      review: "",
+      rating: 0,
+      categories: {
+        communication: 0,
+        requirements: 0,
+        support: 0,
+        professionalism: 0,
+        payment: 0,
+      },
+    },
+  });
   
   if (!user) {
     return <Navigate to="/auth" />;
   }
+
+  const handleCategoryRatingChange = (category: string, value: number) => {
+    setFormCategories((prev) => ({
+      ...prev,
+      [category]: value,
+    }));
+  };
+
+  const handleSubmitReview = (values: ReviewFormValues) => {
+    // In a real app, you'd send this to your backend
+    const selectedCompanyName = mockCompanies.find(
+      (company) => company.id === values.companyId
+    )?.name;
+
+    // Create a new review object
+    const newReview = {
+      id: `review-${Date.now()}`,
+      reviewee: {
+        id: values.companyId,
+        name: selectedCompanyName || "Unknown Company",
+        avatar: "/placeholder.svg",
+      },
+      jobTitle: values.jobTitle,
+      date: new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      rating: formRating,
+      review: values.review,
+      categories: formCategories,
+    };
+
+    // Add to given reviews (in a real app, this would be saved to a database)
+    givenReviews.push(newReview);
+
+    // Close dialog and show success message
+    setIsDialogOpen(false);
+    toast({
+      title: "Review submitted",
+      description: "Your review has been successfully submitted.",
+    });
+
+    // Reset form
+    form.reset();
+    setFormRating(0);
+    setFormCategories({
+      communication: 0,
+      requirements: 0,
+      support: 0,
+      professionalism: 0,
+      payment: 0,
+    });
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -117,6 +243,130 @@ const Reviews = () => {
                 View and manage your reviews and feedback
               </p>
             </div>
+            
+            {/* Add Review Button (only visible for trainers) */}
+            {user.role === "trainer" && (
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-brand-600 hover:bg-brand-700">
+                    Give Review to Company
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[625px]">
+                  <DialogHeader>
+                    <DialogTitle>Submit a Review</DialogTitle>
+                    <DialogDescription>
+                      Share your experience working with this company. Your feedback helps other trainers.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleSubmitReview)} className="space-y-6 py-4">
+                      <FormField
+                        control={form.control}
+                        name="companyId"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Select Company</FormLabel>
+                            <select 
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              onChange={(e) => {
+                                field.onChange(e.target.value);
+                                setSelectedCompany(e.target.value);
+                              }}
+                              value={field.value}
+                            >
+                              <option value="" disabled>Select a company to review</option>
+                              {mockCompanies.map((company) => (
+                                <option key={company.id} value={company.id}>
+                                  {company.name}
+                                </option>
+                              ))}
+                            </select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="jobTitle"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Job Title or Workshop</FormLabel>
+                            <FormControl>
+                              <input
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                placeholder="e.g. React Advanced Workshop Trainer"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="space-y-2">
+                        <FormLabel>Overall Rating</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <RatingStars rating={formRating} onRatingChange={setFormRating} />
+                          {formRating > 0 && <span className="font-semibold">{formRating}.0</span>}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <FormLabel>Rate Your Experience</FormLabel>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {Object.keys(formCategories).map((category) => (
+                            <div key={category} className="space-y-2 bg-muted/40 p-3 rounded-md">
+                              <p className="capitalize text-sm">{category}</p>
+                              <RatingStars
+                                rating={formCategories[category as keyof typeof formCategories]}
+                                onRatingChange={(rating) => handleCategoryRatingChange(category, rating)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name="review"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Review</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Share your experience working with this company..."
+                                className="min-h-[120px]"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <DialogFooter>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setIsDialogOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          type="submit"
+                          className="bg-brand-600 hover:bg-brand-700"
+                          disabled={!selectedCompany || formRating === 0}
+                        >
+                          Submit Review
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           <Tabs
