@@ -1,15 +1,19 @@
-
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, Mail, MapPin, Award, Book, FileCheck, Star, MessageSquare } from "lucide-react";
+import { Calendar, Mail, MapPin, Award, Book, FileCheck, Star, MessageSquare, Building, Users, School, StarHalf } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
 
 // Types for profile data
 type TrainerStats = {
@@ -24,6 +28,23 @@ type CompanyStats = {
   averageRating: number;
   trainingPrograms: number;
   paymentReliability: number;
+};
+
+type College = {
+  id: string;
+  name: string;
+  location: string;
+  website?: string;
+  partnership_year: string;
+};
+
+type Review = {
+  id: string;
+  author: string;
+  rating: number;
+  date: string;
+  content: string;
+  avatar?: string;
 };
 
 type TrainerProfile = {
@@ -58,6 +79,11 @@ type CompanyProfile = {
   foundedYear: number;
   companySize: string;
   website: string;
+  industryFocus?: string[];
+  trainingPhilosophy?: string;
+  targetAudience?: string[];
+  affiliatedColleges?: College[];
+  reviews?: Review[];
   stats: CompanyStats;
 };
 
@@ -111,6 +137,58 @@ const mockCompanyProfile: CompanyProfile = {
   foundedYear: 2015,
   companySize: "50-100 employees",
   website: "https://techlearnsolutions.com",
+  industryFocus: ["Technology", "Finance", "Healthcare", "Education"],
+  trainingPhilosophy: "Our approach combines practical, hands-on learning with theoretical foundations. We believe in small group sessions with personalized attention and real-world project work.",
+  targetAudience: ["Software Development Teams", "IT Departments", "Product Managers", "Data Scientists"],
+  affiliatedColleges: [
+    {
+      id: "college1",
+      name: "Massachusetts Institute of Technology",
+      location: "Cambridge, MA",
+      website: "https://mit.edu",
+      partnership_year: "2017"
+    },
+    {
+      id: "college2",
+      name: "Stanford University",
+      location: "Stanford, CA",
+      website: "https://stanford.edu",
+      partnership_year: "2018"
+    },
+    {
+      id: "college3",
+      name: "Harvard University",
+      location: "Cambridge, MA",
+      website: "https://harvard.edu",
+      partnership_year: "2019"
+    }
+  ],
+  reviews: [
+    {
+      id: "review1",
+      author: "John Smith",
+      rating: 5,
+      date: "2024-03-15",
+      content: "TechLearn provided exceptional training for our development team. Their hands-on approach and expert trainers made complex concepts accessible to everyone.",
+      avatar: "/placeholder.svg"
+    },
+    {
+      id: "review2",
+      author: "Sarah Johnson",
+      rating: 4.5,
+      date: "2024-02-20",
+      content: "The customized curriculum perfectly addressed our team's skill gaps. Great communication throughout the process and excellent follow-up materials.",
+      avatar: "/placeholder.svg"
+    },
+    {
+      id: "review3",
+      author: "Michael Chen",
+      rating: 5,
+      date: "2024-01-10",
+      content: "We've worked with TechLearn for three consecutive years for our onboarding program. Their training consistently receives top ratings from new hires.",
+      avatar: "/placeholder.svg"
+    }
+  ],
   stats: {
     trainersHired: 124,
     averageRating: 4.7,
@@ -119,20 +197,82 @@ const mockCompanyProfile: CompanyProfile = {
   }
 };
 
+const StarRating = ({ rating }: { rating: number }) => {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 !== 0;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+  
+  return (
+    <div className="flex">
+      {[...Array(fullStars)].map((_, i) => (
+        <Star key={`full-${i}`} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+      ))}
+      {hasHalfStar && (
+        <StarHalf className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+      )}
+      {[...Array(emptyStars)].map((_, i) => (
+        <Star key={`empty-${i}`} className="h-4 w-4 text-yellow-400" />
+      ))}
+    </div>
+  );
+};
+
 const Profile = () => {
   const { id } = useParams();
   const { user } = useContext(UserContext);
   const [isEditing, setIsEditing] = useState(false);
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    // In a real app, you'd fetch the profile data from your API
+    // For now, we'll use mock data
+    const fetchProfile = () => {
+      setLoading(true);
+      // Mock fetching profile data based on user role
+      const data = user?.role === "trainer" ? mockTrainerProfile : mockCompanyProfile;
+      setProfileData(data);
+      setLoading(false);
+    };
+    
+    fetchProfile();
+  }, [user]);
   
   if (!user) {
     return <Navigate to="/auth" />;
   }
   
-  // Mock profile data based on role
-  // In a real app, you would fetch this from your API
-  const profileData: ProfileData = user.role === "trainer" ? mockTrainerProfile : mockCompanyProfile;
+  if (loading || !profileData) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
+  
   const isOwnProfile = user?.id === profileData.id;
   const isTrainer = profileData.role === "trainer";
+  const isCompany = profileData.role === "company";
+
+  const form = useForm({
+    defaultValues: {
+      ...(isCompany ? {
+        name: (profileData as CompanyProfile).name,
+        title: (profileData as CompanyProfile).title,
+        bio: (profileData as CompanyProfile).bio,
+        companySize: (profileData as CompanyProfile).companySize,
+        website: (profileData as CompanyProfile).website,
+        location: (profileData as CompanyProfile).location,
+        trainingPhilosophy: (profileData as CompanyProfile).trainingPhilosophy || "",
+      } : {
+        name: (profileData as TrainerProfile).name,
+        title: (profileData as TrainerProfile).title,
+        bio: (profileData as TrainerProfile).bio,
+        hourlyRate: (profileData as TrainerProfile).hourlyRate,
+        location: (profileData as TrainerProfile).location,
+      })
+    }
+  });
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -225,7 +365,42 @@ const Profile = () => {
                         <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                         <span>Contact via platform messages</span>
                       </div>
+                      
+                      {isCompany && (
+                        <div className="flex items-center mt-2 text-sm">
+                          <Building className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <a href={(profileData as CompanyProfile).website} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
+                            {(profileData as CompanyProfile).website.replace(/^https?:\/\//, '')}
+                          </a>
+                        </div>
+                      )}
                     </div>
+                    
+                    {isCompany && (
+                      <div className="pt-4 border-t">
+                        <h3 className="font-medium mb-2">Company Info</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Founded:</span>
+                            <span>{(profileData as CompanyProfile).foundedYear}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Size:</span>
+                            <span>{(profileData as CompanyProfile).companySize}</span>
+                          </div>
+                          {(profileData as CompanyProfile).industryFocus && (
+                            <div>
+                              <span className="text-muted-foreground">Industry Focus:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {(profileData as CompanyProfile).industryFocus.map((industry) => (
+                                  <Badge key={industry} variant="outline" className="text-xs">{industry}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -239,14 +414,37 @@ const Profile = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{profileData.bio}</p>
+                  
+                  {isCompany && (profileData as CompanyProfile).trainingPhilosophy && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h3 className="font-medium mb-2">Training Philosophy</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {(profileData as CompanyProfile).trainingPhilosophy}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {isCompany && (profileData as CompanyProfile).targetAudience && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h3 className="font-medium mb-2">Target Audience</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {(profileData as CompanyProfile).targetAudience.map((audience) => (
+                          <Badge key={audience} variant="secondary">{audience}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               
-              <Tabs defaultValue="details" className="w-full">
+              <Tabs defaultValue={isCompany ? "details" : "details"} className="w-full">
                 <TabsList className="w-full justify-start">
                   <TabsTrigger value="details">
                     {isTrainer ? "Expertise" : "Company Details"}
                   </TabsTrigger>
+                  {isCompany && (
+                    <TabsTrigger value="colleges">Affiliated Colleges</TabsTrigger>
+                  )}
                   <TabsTrigger value="reviews">Reviews</TabsTrigger>
                   {isTrainer && (
                     <TabsTrigger value="education">Education & Certifications</TabsTrigger>
@@ -255,6 +453,7 @@ const Profile = () => {
                 
                 <TabsContent value="details" className="space-y-4 mt-4">
                   {isTrainer ? (
+                    // ... keep existing code for trainer details
                     <>
                       <Card>
                         <CardHeader>
@@ -325,6 +524,62 @@ const Profile = () => {
                   )}
                 </TabsContent>
                 
+                {isCompany && (
+                  <TabsContent value="colleges" className="space-y-4 mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Affiliated Colleges</CardTitle>
+                        <CardDescription>Educational institutions we partner with</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {(profileData as CompanyProfile).affiliatedColleges && 
+                         (profileData as CompanyProfile).affiliatedColleges.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>College Name</TableHead>
+                                <TableHead>Location</TableHead>
+                                <TableHead>Partnership Since</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {(profileData as CompanyProfile).affiliatedColleges?.map((college) => (
+                                <TableRow key={college.id}>
+                                  <TableCell className="font-medium">
+                                    <div className="flex items-center">
+                                      <School className="h-4 w-4 mr-2 text-muted-foreground" />
+                                      {college.website ? (
+                                        <a href={college.website} target="_blank" rel="noopener noreferrer" className="hover:underline text-brand-600">
+                                          {college.name}
+                                        </a>
+                                      ) : (
+                                        college.name
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{college.location}</TableCell>
+                                  <TableCell>{college.partnership_year}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <School className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
+                            <p>No affiliated colleges listed</p>
+                          </div>
+                        )}
+                        
+                        {isOwnProfile && isEditing && (
+                          <Button variant="outline" size="sm" className="mt-4">
+                            Add College Affiliation
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                )}
+                
                 <TabsContent value="reviews" className="space-y-4 mt-4">
                   <Card>
                     <CardHeader>
@@ -334,10 +589,47 @@ const Profile = () => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Star className="h-12 w-12 mx-auto mb-4 text-yellow-400 opacity-30" />
-                        <p>No reviews yet</p>
-                      </div>
+                      {isCompany && (profileData as CompanyProfile).reviews && 
+                       (profileData as CompanyProfile).reviews.length > 0 ? (
+                        <div className="space-y-6">
+                          {(profileData as CompanyProfile).reviews?.map((review) => (
+                            <div key={review.id} className="border-b pb-4 last:border-0">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={review.avatar || "/placeholder.svg"} alt={review.author} />
+                                    <AvatarFallback>{review.author.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium">{review.author}</p>
+                                    <div className="flex items-center space-x-2">
+                                      <StarRating rating={review.rating} />
+                                      <span className="text-xs text-muted-foreground">
+                                        {new Date(review.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="mt-2 text-sm text-muted-foreground">{review.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Star className="h-12 w-12 mx-auto mb-4 text-yellow-400 opacity-30" />
+                          <p>No reviews yet</p>
+                        </div>
+                      )}
+                      
+                      {!isOwnProfile && (
+                        <div className="mt-6 pt-4 border-t">
+                          <Button variant="outline" className="w-full">
+                            <Star className="h-4 w-4 mr-2" />
+                            Write a Review
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
