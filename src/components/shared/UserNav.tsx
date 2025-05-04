@@ -35,10 +35,10 @@ export function UserNav() {
     return (
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/auth">Log in</Link>
+          <Link to="/login">Log in</Link>
         </Button>
         <Button size="sm" className="bg-brand-600 hover:bg-brand-700" asChild>
-          <Link to="/auth?tab=register">Sign up</Link>
+          <Link to="/login?tab=register">Sign up</Link>
         </Button>
       </div>
     );

@@ -9,11 +9,9 @@ import { supabase } from "./integrations/supabase/client";
 
 // Pages
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import JobListings from "./pages/JobListings";
 import JobDetail from "./pages/JobDetail";
@@ -90,44 +88,44 @@ const App = () => {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/auth" element={<Navigate to="/login" replace />} />
+              <Route path="/register" element={<Navigate to="/login?tab=register" replace />} />
               <Route
                 path="/dashboard"
-                element={user ? <Dashboard /> : <Navigate to="/auth" replace />}
+                element={user ? <Dashboard /> : <Navigate to="/login" replace />}
               />
               <Route
                 path="/profile/:id"
-                element={user ? <Profile /> : <Navigate to="/auth" replace />}
+                element={user ? <Profile /> : <Navigate to="/login" replace />}
               />
               <Route
                 path="/jobs"
-                element={user ? <JobListings /> : <Navigate to="/auth" replace />}
+                element={user ? <JobListings /> : <Navigate to="/login" replace />}
               />
               <Route
                 path="/jobs/:id"
-                element={user ? <JobDetail /> : <Navigate to="/auth" replace />}
+                element={user ? <JobDetail /> : <Navigate to="/login" replace />}
               />
               <Route
                 path="/create-job"
-                element={user ? <CreateJob /> : <Navigate to="/auth" replace />}
+                element={user ? <CreateJob /> : <Navigate to="/login" replace />}
               />
               <Route
                 path="/messages"
-                element={user ? <Messages /> : <Navigate to="/auth" replace />}
+                element={user ? <Messages /> : <Navigate to="/login" replace />}
               />
               <Route
                 path="/messages/:id"
-                element={user ? <ChatRoom /> : <Navigate to="/auth" replace />}
+                element={user ? <ChatRoom /> : <Navigate to="/login" replace />}
               />
               <Route
                 path="/reviews"
-                element={user ? <Reviews /> : <Navigate to="/auth" replace />}
+                element={user ? <Reviews /> : <Navigate to="/login" replace />}
               />
               <Route
                 path="/settings"
-                element={user ? <Settings /> : <Navigate to="/auth" replace />}
+                element={user ? <Settings /> : <Navigate to="/login" replace />}
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
