@@ -1,6 +1,6 @@
 
 import { useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { UserContext } from "@/App";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -35,10 +35,10 @@ export function UserNav() {
     return (
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <a href="/auth">Log in</a>
+          <Link to="/auth">Log in</Link>
         </Button>
         <Button size="sm" className="bg-brand-600 hover:bg-brand-700" asChild>
-          <a href="/auth?tab=register">Sign up</a>
+          <Link to="/auth?tab=register">Sign up</Link>
         </Button>
       </div>
     );

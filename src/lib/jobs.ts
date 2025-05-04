@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export type Job = {
@@ -100,23 +101,32 @@ export const getJobs = async (isCompany = false, userId?: string) => {
 
 export const applyForJob = async (jobId: string, coverNote?: string) => {
   try {
+    // Get the current user's ID
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, error: "You must be logged in to apply for jobs" };
+    }
+    
+    // Check if the user has already applied for this job
     const { data: existingApplication, error: checkError } = await supabase
       .from('job_applications')
       .select()
       .eq('job_id', jobId)
-      .eq('trainer_id', supabase.auth.getUser().then(({ data }) => data.user?.id))
+      .eq('trainer_id', user.id)
       .single();
 
     if (existingApplication) {
       return { success: false, error: "You have already applied for this job" };
     }
 
+    // If no existing application, create a new one
     const { data, error } = await supabase
       .from('job_applications')
       .insert([
         {
           job_id: jobId,
-          trainer_id: (await supabase.auth.getUser()).data.user?.id,
+          trainer_id: user.id,
           cover_note: coverNote,
         }
       ])
