@@ -38,6 +38,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // Rating stars component
 const RatingStars = ({ rating, onRatingChange }: { rating: number, onRatingChange?: (rating: number) => void }) => {
@@ -139,14 +140,21 @@ const Reviews = () => {
     return <Navigate to="/login" />;
   }
 
-  // Fetch registered companies
+  // Fetch registered companies - Debug the issue
   const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
+      console.log('Fetching companies...');
+      
+      // Use the get_companies RPC function that was created in the SQL migration
       const { data, error } = await supabase.rpc('get_companies');
+      
       if (error) {
+        console.error('Error fetching companies:', error);
         throw new Error(error.message);
       }
+      
+      console.log('Companies fetched:', data);
       return data as Company[];
     },
   });
@@ -332,6 +340,12 @@ const Reviews = () => {
 
   const overallRating = calculateOverallRating();
 
+  // Add helper to debug companies dropdown
+  const debugCompanies = () => {
+    console.log("Companies in state:", companies);
+    console.log("Loading state:", isLoadingCompanies);
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -388,7 +402,7 @@ const Reviews = () => {
                               <SelectContent>
                                 {isLoadingCompanies ? (
                                   <SelectItem value="loading" disabled>Loading companies...</SelectItem>
-                                ) : companies.length > 0 ? (
+                                ) : companies && companies.length > 0 ? (
                                   companies.map((company) => (
                                     <SelectItem key={company.id} value={company.id}>
                                       {company.name}
@@ -399,6 +413,31 @@ const Reviews = () => {
                                 )}
                               </SelectContent>
                             </Select>
+                            {/* Debug button */}
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button 
+                                  type="button" 
+                                  onClick={debugCompanies} 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="mt-2 w-fit self-end"
+                                >
+                                  <Info className="h-4 w-4 mr-1" />
+                                  Debug Info
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-96">
+                                <div className="space-y-2">
+                                  <p className="font-semibold">Companies Data:</p>
+                                  <pre className="bg-muted p-2 rounded text-xs overflow-auto max-h-48">
+                                    {JSON.stringify(companies, null, 2)}
+                                  </pre>
+                                  <p>Loading: {isLoadingCompanies ? "Yes" : "No"}</p>
+                                  <p>Companies Count: {companies?.length || 0}</p>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                             <FormMessage />
                           </FormItem>
                         )}
