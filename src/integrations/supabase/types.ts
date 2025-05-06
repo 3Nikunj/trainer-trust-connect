@@ -143,12 +143,77 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          created_at: string
+          id: string
+          job_title: string
+          rating: number
+          rating_communication: number | null
+          rating_curriculum: number | null
+          rating_delivery: number | null
+          rating_expertise: number | null
+          rating_payment: number | null
+          rating_professionalism: number | null
+          rating_requirements: number | null
+          rating_support: number | null
+          review: string
+          reviewee_id: string
+          reviewer_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_title: string
+          rating: number
+          rating_communication?: number | null
+          rating_curriculum?: number | null
+          rating_delivery?: number | null
+          rating_expertise?: number | null
+          rating_payment?: number | null
+          rating_professionalism?: number | null
+          rating_requirements?: number | null
+          rating_support?: number | null
+          review: string
+          reviewee_id: string
+          reviewer_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_title?: string
+          rating?: number
+          rating_communication?: number | null
+          rating_curriculum?: number | null
+          rating_delivery?: number | null
+          rating_expertise?: number | null
+          rating_payment?: number | null
+          rating_professionalism?: number | null
+          rating_requirements?: number | null
+          rating_support?: number | null
+          review?: string
+          reviewee_id?: string
+          reviewer_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_companies: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          email: string
+          role: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

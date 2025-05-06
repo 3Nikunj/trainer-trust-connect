@@ -1,5 +1,5 @@
 
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -30,78 +30,14 @@ import {
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-// Mock review data
-const receivedReviews = [
-  {
-    id: "review1",
-    reviewer: {
-      id: "company456",
-      name: "TechLearn Solutions",
-      avatar: "/placeholder.svg",
-    },
-    jobTitle: "React Advanced Workshop Trainer",
-    date: "May 15, 2023",
-    rating: 5,
-    review: "Alex did an outstanding job with our React training. The team was highly engaged and came away with practical skills they could immediately apply. His expertise and teaching style made complex concepts accessible, and the custom exercises were particularly valuable. Would definitely hire again.",
-    categories: {
-      expertise: 5,
-      communication: 5,
-      professionalism: 5,
-      curriculum: 4,
-      delivery: 5
-    }
-  },
-  {
-    id: "review2",
-    reviewer: {
-      id: "company789",
-      name: "Enterprise Cloud Solutions",
-      avatar: "/placeholder.svg",
-    },
-    jobTitle: "AWS Cloud Architecture Workshop",
-    date: "April 3, 2023",
-    rating: 4,
-    review: "Great training session on AWS architecture. Alex demonstrated deep knowledge of the subject matter and handled all questions well. The workshop materials were comprehensive and useful for reference afterward. Some of the advanced topics could have used more time, but overall an excellent training experience.",
-    categories: {
-      expertise: 5,
-      communication: 4,
-      professionalism: 5,
-      curriculum: 4,
-      delivery: 4
-    }
-  }
-];
-
-const givenReviews = [
-  {
-    id: "review3",
-    reviewee: {
-      id: "company456",
-      name: "TechLearn Solutions",
-      avatar: "/placeholder.svg",
-    },
-    jobTitle: "React Advanced Workshop Trainer",
-    date: "May 18, 2023",
-    rating: 5,
-    review: "Working with TechLearn was a pleasure from start to finish. They provided clear requirements, excellent communication throughout the project, and were responsive to questions. The training facilities and technical setup were perfect. Payment was processed promptly after completion. Highly recommend them as a client.",
-    categories: {
-      communication: 5,
-      requirements: 5,
-      support: 5,
-      professionalism: 5,
-      payment: 5
-    }
-  }
-];
-
-// Mock company data for the dropdown
-const mockCompanies = [
-  { id: "company456", name: "TechLearn Solutions" },
-  { id: "company789", name: "Enterprise Cloud Solutions" },
-  { id: "company101", name: "DataDriven Insights" },
-  { id: "company202", name: "InnoSoft Academy" },
-];
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Rating stars component
 const RatingStars = ({ rating, onRatingChange }: { rating: number, onRatingChange?: (rating: number) => void }) => {
@@ -118,6 +54,38 @@ const RatingStars = ({ rating, onRatingChange }: { rating: number, onRatingChang
       ))}
     </div>
   );
+};
+
+// Types
+type Company = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
+type Review = {
+  id: string;
+  reviewer_id: string;
+  reviewee_id: string;
+  job_title: string;
+  rating: number;
+  review: string;
+  created_at: string;
+  categories?: {
+    communication?: number;
+    requirements?: number;
+    support?: number;
+    professionalism?: number;
+    payment?: number;
+    expertise?: number;
+    curriculum?: number;
+    delivery?: number;
+  };
+  reviewerName?: string;
+  revieweeName?: string;
+  reviewerAvatar?: string;
+  revieweeAvatar?: string;
 };
 
 // Review form type
@@ -149,6 +117,7 @@ const Reviews = () => {
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const form = useForm<ReviewFormValues>({
     defaultValues: {
@@ -167,8 +136,157 @@ const Reviews = () => {
   });
   
   if (!user) {
-    return <Navigate to="/auth" />;
+    return <Navigate to="/login" />;
   }
+
+  // Fetch registered companies
+  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_companies');
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data as Company[];
+    },
+  });
+
+  // Fetch reviews where user is the reviewee (reviews received)
+  const { data: receivedReviews = [], isLoading: isLoadingReceived } = useQuery({
+    queryKey: ['receivedReviews', user?.id],
+    queryFn: async () => {
+      const { data: reviews, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('reviewee_id', user.id);
+      
+      if (error) {
+        console.error('Error fetching received reviews:', error);
+        return [];
+      }
+
+      // Fetch reviewer names
+      const reviewsWithNames = await Promise.all(
+        reviews.map(async (review) => {
+          // Get reviewer info
+          const { data: reviewerData } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', review.reviewer_id)
+            .single();
+
+          return {
+            ...review,
+            reviewerName: reviewerData?.full_name || 'Unknown User',
+            reviewerAvatar: reviewerData?.avatar_url || '/placeholder.svg',
+            categories: {
+              expertise: review.rating_expertise,
+              communication: review.rating_communication,
+              professionalism: review.rating_professionalism,
+              curriculum: review.rating_curriculum,
+              delivery: review.rating_delivery,
+            }
+          };
+        })
+      );
+
+      return reviewsWithNames;
+    },
+  });
+
+  // Fetch reviews where user is the reviewer (reviews given)
+  const { data: givenReviews = [], isLoading: isLoadingGiven } = useQuery({
+    queryKey: ['givenReviews', user?.id],
+    queryFn: async () => {
+      const { data: reviews, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('reviewer_id', user.id);
+      
+      if (error) {
+        console.error('Error fetching given reviews:', error);
+        return [];
+      }
+
+      // Fetch reviewee names
+      const reviewsWithNames = await Promise.all(
+        reviews.map(async (review) => {
+          // Get reviewee info
+          const { data: revieweeData } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', review.reviewee_id)
+            .single();
+
+          return {
+            ...review,
+            revieweeName: revieweeData?.full_name || 'Unknown User',
+            revieweeAvatar: revieweeData?.avatar_url || '/placeholder.svg',
+            categories: {
+              communication: review.rating_communication,
+              requirements: review.rating_requirements,
+              support: review.rating_support,
+              professionalism: review.rating_professionalism,
+              payment: review.rating_payment,
+            }
+          };
+        })
+      );
+
+      return reviewsWithNames;
+    },
+  });
+
+  // Create review mutation
+  const createReviewMutation = useMutation({
+    mutationFn: async (reviewData: {
+      reviewee_id: string;
+      job_title: string;
+      rating: number;
+      review: string;
+      rating_communication: number;
+      rating_requirements: number;
+      rating_support: number;
+      rating_professionalism: number;
+      rating_payment: number;
+    }) => {
+      const { error } = await supabase
+        .from('reviews')
+        .insert([{
+          reviewer_id: user.id,
+          ...reviewData
+        }]);
+      
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['givenReviews'] });
+      queryClient.invalidateQueries({ queryKey: ['receivedReviews'] });
+      setIsDialogOpen(false);
+      toast({
+        title: "Review submitted",
+        description: "Your review has been successfully submitted.",
+      });
+      
+      // Reset form
+      form.reset();
+      setFormRating(0);
+      setFormCategories({
+        communication: 0,
+        requirements: 0,
+        support: 0,
+        professionalism: 0,
+        payment: 0,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to submit review: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleCategoryRatingChange = (category: string, value: number) => {
     setFormCategories((prev) => ({
@@ -178,51 +296,41 @@ const Reviews = () => {
   };
 
   const handleSubmitReview = (values: ReviewFormValues) => {
-    // In a real app, you'd send this to your backend
-    const selectedCompanyName = mockCompanies.find(
+    const selectedCompanyName = companies.find(
       (company) => company.id === values.companyId
     )?.name;
 
-    // Create a new review object
-    const newReview = {
-      id: `review-${Date.now()}`,
-      reviewee: {
-        id: values.companyId,
-        name: selectedCompanyName || "Unknown Company",
-        avatar: "/placeholder.svg",
-      },
-      jobTitle: values.jobTitle,
-      date: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
+    if (!selectedCompanyName) {
+      toast({
+        title: "Error",
+        description: "Please select a valid company",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createReviewMutation.mutate({
+      reviewee_id: values.companyId,
+      job_title: values.jobTitle,
       rating: formRating,
       review: values.review,
-      categories: formCategories,
-    };
-
-    // Add to given reviews (in a real app, this would be saved to a database)
-    givenReviews.push(newReview);
-
-    // Close dialog and show success message
-    setIsDialogOpen(false);
-    toast({
-      title: "Review submitted",
-      description: "Your review has been successfully submitted.",
-    });
-
-    // Reset form
-    form.reset();
-    setFormRating(0);
-    setFormCategories({
-      communication: 0,
-      requirements: 0,
-      support: 0,
-      professionalism: 0,
-      payment: 0,
+      rating_communication: formCategories.communication,
+      rating_requirements: formCategories.requirements,
+      rating_support: formCategories.support,
+      rating_professionalism: formCategories.professionalism,
+      rating_payment: formCategories.payment,
     });
   };
+
+  // Calculate overall rating from received reviews
+  const calculateOverallRating = () => {
+    if (!receivedReviews || receivedReviews.length === 0) return 0;
+    
+    const sum = receivedReviews.reduce((acc, review) => acc + review.rating, 0);
+    return Math.round((sum / receivedReviews.length) * 10) / 10; // Round to 1 decimal place
+  };
+
+  const overallRating = calculateOverallRating();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -267,21 +375,30 @@ const Reviews = () => {
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
                             <FormLabel>Select Company</FormLabel>
-                            <select 
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                              onChange={(e) => {
-                                field.onChange(e.target.value);
-                                setSelectedCompany(e.target.value);
-                              }}
+                            <Select
                               value={field.value}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                setSelectedCompany(value);
+                              }}
                             >
-                              <option value="" disabled>Select a company to review</option>
-                              {mockCompanies.map((company) => (
-                                <option key={company.id} value={company.id}>
-                                  {company.name}
-                                </option>
-                              ))}
-                            </select>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select a company to review" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {isLoadingCompanies ? (
+                                  <SelectItem value="loading" disabled>Loading companies...</SelectItem>
+                                ) : companies.length > 0 ? (
+                                  companies.map((company) => (
+                                    <SelectItem key={company.id} value={company.id}>
+                                      {company.name}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <SelectItem value="none" disabled>No companies registered</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -357,9 +474,9 @@ const Reviews = () => {
                         <Button 
                           type="submit"
                           className="bg-brand-600 hover:bg-brand-700"
-                          disabled={!selectedCompany || formRating === 0}
+                          disabled={!selectedCompany || formRating === 0 || createReviewMutation.isPending}
                         >
-                          Submit Review
+                          {createReviewMutation.isPending ? "Submitting..." : "Submit Review"}
                         </Button>
                       </DialogFooter>
                     </form>
@@ -384,15 +501,19 @@ const Reviews = () => {
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <p className="font-medium">Overall Rating:</p>
                 <div className="flex items-center">
-                  <RatingStars rating={4.5} />
-                  <span className="ml-2 font-bold text-amber-500">4.5</span>
+                  <RatingStars rating={overallRating} />
+                  <span className="ml-2 font-bold text-amber-500">{overallRating}</span>
                 </div>
               </div>
             </div>
 
             {/* Reviews Received */}
             <TabsContent value="received" className="space-y-6">
-              {receivedReviews.length > 0 ? (
+              {isLoadingReceived ? (
+                <div className="text-center py-12">
+                  <p>Loading reviews...</p>
+                </div>
+              ) : receivedReviews.length > 0 ? (
                 receivedReviews.map((review) => (
                   <Card key={review.id}>
                     <CardHeader className="pb-2">
@@ -400,24 +521,21 @@ const Reviews = () => {
                         <div className="flex items-center">
                           <Avatar className="h-10 w-10 mr-3">
                             <AvatarImage
-                              src={review.reviewer.avatar}
-                              alt={review.reviewer.name}
+                              src={review.reviewerAvatar}
+                              alt={review.reviewerName}
                             />
                             <AvatarFallback>
-                              {review.reviewer.name.slice(0, 2).toUpperCase()}
+                              {review.reviewerName?.slice(0, 2).toUpperCase() || "UN"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <CardTitle className="text-base">
-                              <a
-                                href={`/profile/${review.reviewer.id}`}
-                                className="hover:text-brand-600"
-                              >
-                                {review.reviewer.name}
-                              </a>
+                              <span className="hover:text-brand-600">
+                                {review.reviewerName}
+                              </span>
                             </CardTitle>
                             <CardDescription className="text-xs">
-                              {review.jobTitle} • {review.date}
+                              {review.job_title} • {new Date(review.created_at).toLocaleDateString()}
                             </CardDescription>
                           </div>
                         </div>
@@ -431,10 +549,10 @@ const Reviews = () => {
                       <p className="text-sm">{review.review}</p>
                       
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
-                        {Object.entries(review.categories).map(([key, value]) => (
+                        {review.categories && Object.entries(review.categories).filter(([, value]) => value).map(([key, value]) => (
                           <div key={key} className="bg-muted/40 p-2 rounded-md text-center">
                             <p className="capitalize mb-1">{key}</p>
-                            <RatingStars rating={value} />
+                            <RatingStars rating={value || 0} />
                           </div>
                         ))}
                       </div>
@@ -471,7 +589,11 @@ const Reviews = () => {
 
             {/* Reviews Given */}
             <TabsContent value="given" className="space-y-6">
-              {givenReviews.length > 0 ? (
+              {isLoadingGiven ? (
+                <div className="text-center py-12">
+                  <p>Loading reviews...</p>
+                </div>
+              ) : givenReviews.length > 0 ? (
                 givenReviews.map((review) => (
                   <Card key={review.id}>
                     <CardHeader className="pb-2">
@@ -479,24 +601,21 @@ const Reviews = () => {
                         <div className="flex items-center">
                           <Avatar className="h-10 w-10 mr-3">
                             <AvatarImage
-                              src={review.reviewee.avatar}
-                              alt={review.reviewee.name}
+                              src={review.revieweeAvatar}
+                              alt={review.revieweeName}
                             />
                             <AvatarFallback>
-                              {review.reviewee.name.slice(0, 2).toUpperCase()}
+                              {review.revieweeName?.slice(0, 2).toUpperCase() || "UN"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <CardTitle className="text-base">
-                              <a
-                                href={`/profile/${review.reviewee.id}`}
-                                className="hover:text-brand-600"
-                              >
-                                {review.reviewee.name}
-                              </a>
+                              <span className="hover:text-brand-600">
+                                {review.revieweeName}
+                              </span>
                             </CardTitle>
                             <CardDescription className="text-xs">
-                              {review.jobTitle} • {review.date}
+                              {review.job_title} • {new Date(review.created_at).toLocaleDateString()}
                             </CardDescription>
                           </div>
                         </div>
@@ -510,10 +629,10 @@ const Reviews = () => {
                       <p className="text-sm">{review.review}</p>
                       
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
-                        {Object.entries(review.categories).map(([key, value]) => (
+                        {review.categories && Object.entries(review.categories).filter(([, value]) => value).map(([key, value]) => (
                           <div key={key} className="bg-muted/40 p-2 rounded-md text-center">
                             <p className="capitalize mb-1">{key}</p>
-                            <RatingStars rating={value} />
+                            <RatingStars rating={value || 0} />
                           </div>
                         ))}
                       </div>
