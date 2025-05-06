@@ -1,4 +1,3 @@
-
 import { useContext, useState, useEffect } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { UserContext } from "@/App";
@@ -109,7 +108,7 @@ const Dashboard = () => {
       let activity: Activity[] = [];
 
       if (isCompany) {
-        // For companies, show recent applications to their jobs
+        // For companies, show recent applications to their job listings
         const { data: applications } = await supabase
           .from('job_applications')
           .select(`
@@ -161,6 +160,21 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching recent activity:', error);
     }
+  };
+
+  // Function to extract company ID from job titles for recent activities
+  const extractCompanyIdFromActivity = (activity, jobsData) => {
+    if (!activity || !jobsData) return null;
+    
+    // For companies looking at applicants, we don't need to extract
+    if (activity.type === 'job') return activity.id;
+    
+    // For applications, try to find the job in jobsData
+    const jobMatch = jobsData.find(job => 
+      activity.title.includes(job.title)
+    );
+    
+    return jobMatch ? jobMatch.companyId : null;
   };
 
   // Data for performance chart
@@ -280,16 +294,27 @@ const Dashboard = () => {
                 <CardContent>
                   {recentActivity.length > 0 ? (
                     <div className="space-y-4">
-                      {recentActivity.map((activity) => (
-                        <div key={activity.id} className="flex items-center justify-between border-b pb-2">
-                          <div>
-                            <p className="text-sm font-medium">{activity.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {activity.date} • Status: <span className="capitalize">{activity.status}</span>
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                      {recentActivity.map((activity) => {
+                        const jobInfo = activity.title.match(/applied to "(.+)" at (.+)$/);
+                        const companyId = extractCompanyIdFromActivity(activity, jobsData);
+                        
+                        return (
+                          <TableRow key={activity.id}>
+                            <TableCell>{jobInfo ? jobInfo[1] : activity.title}</TableCell>
+                            <TableCell>
+                              {jobInfo && companyId ? (
+                                <Link to={`/profile/${companyId}`} className="text-brand-600 hover:underline">
+                                  {jobInfo[2]}
+                                </Link>
+                              ) : (
+                                jobInfo ? jobInfo[2] : '-'
+                              )}
+                            </TableCell>
+                            <TableCell>{activity.date}</TableCell>
+                            <TableCell className="capitalize">{activity.status}</TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">No recent activity to display.</p>
@@ -322,10 +347,20 @@ const Dashboard = () => {
                       <TableBody>
                         {recentActivity.map((activity) => {
                           const jobInfo = activity.title.match(/applied to "(.+)" at (.+)$/);
+                          const companyId = extractCompanyIdFromActivity(activity, jobsData);
+                          
                           return (
                             <TableRow key={activity.id}>
                               <TableCell>{jobInfo ? jobInfo[1] : activity.title}</TableCell>
-                              <TableCell>{jobInfo ? jobInfo[2] : '-'}</TableCell>
+                              <TableCell>
+                                {jobInfo && companyId ? (
+                                  <Link to={`/profile/${companyId}`} className="text-brand-600 hover:underline">
+                                    {jobInfo[2]}
+                                  </Link>
+                                ) : (
+                                  jobInfo ? jobInfo[2] : '-'
+                                )}
+                              </TableCell>
                               <TableCell>{activity.date}</TableCell>
                               <TableCell className="capitalize">{activity.status}</TableCell>
                             </TableRow>

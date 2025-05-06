@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Job } from "@/lib/jobs";
 import { applyForJob } from "@/lib/jobs";
 import { useToast } from "@/components/ui/use-toast";
+import { Link } from "react-router-dom";
 
 const jobData = {
   id: "job1",
@@ -348,7 +349,7 @@ const JobDetail = () => {
                     <CardContent>
                       <p className="mb-4">This company specializes in providing training solutions.</p>
                       <Button variant="outline" asChild>
-                        <a href={`/profile/${job.companyId}`}>View Company Profile</a>
+                        <Link to={`/profile/${job.companyId}`}>View Company Profile</Link>
                       </Button>
                     </CardContent>
                   </Card>
