@@ -1,5 +1,5 @@
 
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,20 +13,71 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
-  const { user } = useContext(UserContext);
+  const { user, setUser } = useContext(UserContext);
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
+  const isCompany = user?.role === "company";
   
+  // Different form state based on user role
   const [profileForm, setProfileForm] = useState({
+    // Common fields
     name: user?.name || "",
     email: user?.email || "",
     title: "",
     bio: "",
     location: "",
-    website: ""
+    website: "",
+    
+    // Company-specific fields
+    companySize: "",
+    foundedYear: "",
+    trainingPhilosophy: "",
+    
+    // Trainer-specific fields
+    hourlyRate: "",
+    skills: []
   });
+  
+  // Fetch profile data on component mount
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) throw error;
+        
+        // Update form with profile data if available
+        if (data) {
+          setProfileForm(prev => ({
+            ...prev,
+            name: data.full_name || prev.name,
+            title: data.title || prev.title,
+            bio: data.bio || prev.bio,
+            location: data.location || prev.location,
+            website: data.website || prev.website,
+            companySize: isCompany ? (data.company_size || prev.companySize) : prev.companySize,
+            foundedYear: isCompany ? (data.founded_year || prev.foundedYear) : prev.foundedYear,
+            trainingPhilosophy: isCompany ? (data.training_philosophy || prev.trainingPhilosophy) : prev.trainingPhilosophy,
+            hourlyRate: !isCompany ? (data.hourly_rate || prev.hourlyRate) : prev.hourlyRate,
+            skills: !isCompany && data.skills ? data.skills : prev.skills
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching profile data:', error);
+      }
+    };
+    
+    fetchProfileData();
+  }, [user?.id, isCompany]);
   
   const [notificationSettings, setNotificationSettings] = useState({
     email: {
@@ -69,11 +120,54 @@ const Settings = () => {
     setSecurityForm({ ...securityForm, [name]: value });
   };
   
-  const handleSaveProfile = () => {
-    toast({
-      title: "Profile updated",
-      description: "Your profile changes have been saved."
-    });
+  const handleSaveProfile = async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Update profile data in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profileForm.name,
+          title: profileForm.title,
+          bio: profileForm.bio,
+          location: profileForm.location,
+          website: profileForm.website,
+          // Include role-specific fields
+          ...(isCompany ? {
+            company_size: profileForm.companySize,
+            founded_year: profileForm.foundedYear,
+            training_philosophy: profileForm.trainingPhilosophy,
+          } : {
+            hourly_rate: profileForm.hourlyRate,
+            skills: profileForm.skills,
+          })
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Update local user context
+      setUser(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          name: profileForm.name
+        };
+      });
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile changes have been saved."
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: "There was an error updating your profile."
+      });
+    }
   };
   
   const handleSaveNotifications = () => {
@@ -83,7 +177,7 @@ const Settings = () => {
     });
   };
   
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (securityForm.newPassword !== securityForm.confirmPassword) {
@@ -95,16 +189,30 @@ const Settings = () => {
       return;
     }
     
-    toast({
-      title: "Password updated",
-      description: "Your password has been successfully changed."
-    });
-    
-    setSecurityForm({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: ""
-    });
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: securityForm.newPassword
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully changed."
+      });
+      
+      setSecurityForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Password update failed",
+        description: error.message || "There was an error updating your password."
+      });
+    }
   };
 
   return (
@@ -138,9 +246,11 @@ const Settings = () => {
               <TabsContent value="profile" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Public Profile</CardTitle>
+                    <CardTitle>{isCompany ? "Company Profile" : "Public Profile"}</CardTitle>
                     <CardDescription>
-                      This information will be shown publicly on your profile page
+                      {isCompany 
+                        ? "Information about your company that will be visible to trainers"
+                        : "This information will be shown publicly on your profile page"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -159,7 +269,7 @@ const Settings = () => {
                     
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
+                        <Label htmlFor="name">{isCompany ? "Company Name" : "Full Name"}</Label>
                         <Input
                           id="name"
                           name="name"
@@ -181,11 +291,11 @@ const Settings = () => {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="title">Title / Position</Label>
+                        <Label htmlFor="title">{isCompany ? "Company Tagline" : "Title / Position"}</Label>
                         <Input
                           id="title"
                           name="title"
-                          placeholder="e.g., Frontend Development Trainer"
+                          placeholder={isCompany ? "e.g., Enterprise Training Solutions" : "e.g., Frontend Development Trainer"}
                           value={profileForm.title}
                           onChange={handleProfileChange}
                         />
@@ -213,17 +323,72 @@ const Settings = () => {
                         />
                       </div>
                       
+                      {isCompany && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="companySize">Company Size</Label>
+                            <Input
+                              id="companySize"
+                              name="companySize"
+                              placeholder="e.g., 10-50 employees"
+                              value={profileForm.companySize}
+                              onChange={handleProfileChange}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="foundedYear">Founded Year</Label>
+                            <Input
+                              id="foundedYear"
+                              name="foundedYear"
+                              placeholder="e.g., 2010"
+                              value={profileForm.foundedYear}
+                              onChange={handleProfileChange}
+                            />
+                          </div>
+                        </>
+                      )}
+                      
+                      {!isCompany && (
+                        <div className="space-y-2">
+                          <Label htmlFor="hourlyRate">Hourly Rate</Label>
+                          <Input
+                            id="hourlyRate"
+                            name="hourlyRate"
+                            placeholder="e.g., $150 - $200"
+                            value={profileForm.hourlyRate}
+                            onChange={handleProfileChange}
+                          />
+                        </div>
+                      )}
+                      
                       <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="bio">Bio</Label>
+                        <Label htmlFor="bio">{isCompany ? "Company Description" : "Bio"}</Label>
                         <Textarea
                           id="bio"
                           name="bio"
-                          placeholder="Write a short bio about yourself..."
+                          placeholder={isCompany 
+                            ? "Write about your company, your training offerings, and what makes you unique..."
+                            : "Write a short bio about yourself..."}
                           value={profileForm.bio}
                           onChange={handleProfileChange}
                           className="min-h-32"
                         />
                       </div>
+                      
+                      {isCompany && (
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="trainingPhilosophy">Training Philosophy</Label>
+                          <Textarea
+                            id="trainingPhilosophy"
+                            name="trainingPhilosophy"
+                            placeholder="Describe your company's approach to training and education..."
+                            value={profileForm.trainingPhilosophy}
+                            onChange={handleProfileChange}
+                            className="min-h-32"
+                          />
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                   <CardFooter className="justify-end">
@@ -255,14 +420,14 @@ const Settings = () => {
                 {user?.role === "company" && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Company Information</CardTitle>
+                      <CardTitle>Company Specializations</CardTitle>
                       <CardDescription>
-                        Manage your company details and specializations
+                        Manage your company specializations and target audience
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground">
-                        Coming soon: Add and manage your company details and specializations.
+                        Coming soon: Add and manage your company specializations and target audience.
                       </p>
                     </CardContent>
                   </Card>
