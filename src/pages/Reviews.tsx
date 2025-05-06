@@ -61,7 +61,6 @@ const RatingStars = ({ rating, onRatingChange }: { rating: number, onRatingChang
 type Company = {
   id: string;
   name: string;
-  email: string;
   role: string;
 };
 
@@ -140,22 +139,32 @@ const Reviews = () => {
     return <Navigate to="/login" />;
   }
 
-  // Fetch registered companies - Debug the issue
+  // Fetch registered companies from the profiles table instead of using the RPC function
   const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
-      console.log('Fetching companies...');
+      console.log('Fetching companies from profiles table...');
       
-      // Use the get_companies RPC function that was created in the SQL migration
-      const { data, error } = await supabase.rpc('get_companies');
+      // Get company users from the profiles table with role='company'
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .eq('role', 'company');
       
       if (error) {
-        console.error('Error fetching companies:', error);
+        console.error('Error fetching companies from profiles:', error);
         throw new Error(error.message);
       }
       
-      console.log('Companies fetched:', data);
-      return data as Company[];
+      // Transform the data to match our Company type
+      const companiesData = data.map(profile => ({
+        id: profile.id,
+        name: profile.full_name || 'Unnamed Company',
+        role: profile.role
+      }));
+      
+      console.log('Companies fetched from profiles:', companiesData);
+      return companiesData as Company[];
     },
   });
 
