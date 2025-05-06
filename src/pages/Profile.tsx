@@ -1,3 +1,4 @@
+
 import { useContext, useState, useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { UserContext } from "@/App";
@@ -239,48 +240,102 @@ const Profile = () => {
   });
   
   useEffect(() => {
-    // In a real app, you'd fetch the profile data from your API
-    // For now, we'll use mock data
-    const fetchProfile = () => {
+    const fetchProfile = async () => {
       setLoading(true);
-      // Mock fetching profile data based on user role
-      const data = user?.role === "trainer" ? mockTrainerProfile : mockCompanyProfile;
-      setProfileData(data);
       
-      // Update form values after profile data is loaded
-      if (data) {
-        const isCompanyProfile = data.role === "company";
-        if (isCompanyProfile) {
-          const companyProfile = data as CompanyProfile;
-          form.reset({
-            name: companyProfile.name,
-            title: companyProfile.title,
-            bio: companyProfile.bio,
-            companySize: companyProfile.companySize,
-            website: companyProfile.website,
-            location: companyProfile.location,
-            trainingPhilosophy: companyProfile.trainingPhilosophy || "",
-          });
-        } else {
-          const trainerProfile = data as TrainerProfile;
-          form.reset({
-            name: trainerProfile.name,
-            title: trainerProfile.title,
-            bio: trainerProfile.bio,
-            hourlyRate: trainerProfile.hourlyRate,
-            location: trainerProfile.location,
-            companySize: "",
-            website: "",
-            trainingPhilosophy: "",
-          });
+      try {
+        // Check if we're viewing an actual profile from Supabase
+        if (id) {
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', id)
+            .single();
+            
+          if (error) {
+            console.error('Error fetching profile:', error);
+            // If there's an error, we'll fall back to mock data below
+          } else if (profileData) {
+            // We found a profile, now let's build the appropriate object
+            if (profileData.role === 'company') {
+              const companyProfile: CompanyProfile = {
+                id: profileData.id,
+                name: profileData.full_name || 'Unknown Company',
+                role: 'company',
+                avatar: profileData.avatar_url || '/placeholder.svg',
+                title: profileData.title || 'Enterprise Technology Training Provider',
+                location: profileData.location || 'Unknown Location',
+                bio: profileData.bio || 'No company bio available',
+                specializations: profileData.skills || [],
+                foundedYear: parseInt(profileData.founded_year || '2000'),
+                companySize: profileData.company_size || 'Unknown',
+                website: profileData.website || '#',
+                industryFocus: ['Technology'], // Default value
+                trainingPhilosophy: profileData.training_philosophy || '',
+                targetAudience: ['Technical Teams'], // Default value
+                stats: {
+                  trainersHired: 0, // Default values
+                  averageRating: 4.5,
+                  trainingPrograms: 0,
+                  paymentReliability: 95
+                }
+              };
+              setProfileData(companyProfile);
+            } else {
+              // It's a trainer profile
+              const trainerProfile: TrainerProfile = {
+                id: profileData.id,
+                name: profileData.full_name || 'Unknown Trainer',
+                role: 'trainer',
+                avatar: profileData.avatar_url || '/placeholder.svg',
+                title: profileData.title || 'Trainer',
+                location: profileData.location || 'Unknown Location',
+                bio: profileData.bio || 'No trainer bio available',
+                skills: profileData.skills || [],
+                hourlyRate: profileData.hourly_rate || 'Not specified',
+                languages: ['English'],
+                education: [
+                  {
+                    degree: 'Education info not available',
+                    school: '',
+                    year: ''
+                  }
+                ],
+                certifications: [],
+                stats: {
+                  completionRate: 95,
+                  overallRating: 4.5,
+                  trainingsCompleted: 0,
+                  repeatHireRate: 70
+                }
+              };
+              setProfileData(trainerProfile);
+            }
+            
+            // We successfully loaded the profile data
+            setLoading(false);
+            return;
+          }
         }
+        
+        // If we got here, either there's no ID, or we failed to load from the database
+        // Use mock data as fallback based on current user's role for a personal profile
+        // or based on URL ID's associated role for another user's profile
+        const fallbackData = user?.role === "trainer" ? mockTrainerProfile : mockCompanyProfile;
+        setProfileData(fallbackData);
+        
+      } catch (error) {
+        console.error("Error in profile fetch:", error);
+        // Use mock data as fallback
+        const fallbackData = user?.role === "trainer" ? mockTrainerProfile : mockCompanyProfile;
+        setProfileData(fallbackData);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
     
     fetchProfile();
-  }, [user, form]);
+  }, [id, user, form]);
   
   if (!user) {
     return <Navigate to="/auth" />;
@@ -289,7 +344,8 @@ const Profile = () => {
   if (loading || !profileData) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p>Loading profile...</p>
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+        <p className="ml-2">Loading profile...</p>
       </div>
     );
   }
