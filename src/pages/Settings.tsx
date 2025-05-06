@@ -15,6 +15,26 @@ import { MainNav } from "@/components/shared/MainNav";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// Define a proper type for profile data
+interface ProfileData {
+  avatar_url: string | null;
+  bio: string | null;
+  company_size: string | null;
+  created_at: string;
+  founded_year: string | null;
+  full_name: string | null;
+  hourly_rate: string | null;
+  id: string;
+  location: string | null;
+  role: string | null;
+  skills: string[] | null;
+  title: string | null;
+  training_philosophy: string | null;
+  updated_at: string;
+  username: string | null;
+  website: string | null;
+}
+
 const Settings = () => {
   const { user, setUser } = useContext(UserContext);
   const { toast } = useToast();
@@ -38,7 +58,7 @@ const Settings = () => {
     
     // Trainer-specific fields
     hourlyRate: "",
-    skills: []
+    skills: [] as string[]
   });
   
   // Fetch profile data on component mount
@@ -57,18 +77,19 @@ const Settings = () => {
         
         // Update form with profile data if available
         if (data) {
+          const profileData = data as ProfileData;
           setProfileForm(prev => ({
             ...prev,
-            name: data.full_name || prev.name,
-            title: data.title || prev.title,
-            bio: data.bio || prev.bio,
-            location: data.location || prev.location,
-            website: data.website || prev.website,
-            companySize: isCompany ? (data.company_size || prev.companySize) : prev.companySize,
-            foundedYear: isCompany ? (data.founded_year || prev.foundedYear) : prev.foundedYear,
-            trainingPhilosophy: isCompany ? (data.training_philosophy || prev.trainingPhilosophy) : prev.trainingPhilosophy,
-            hourlyRate: !isCompany ? (data.hourly_rate || prev.hourlyRate) : prev.hourlyRate,
-            skills: !isCompany && data.skills ? data.skills : prev.skills
+            name: profileData.full_name || prev.name,
+            title: profileData.title || prev.title,
+            bio: profileData.bio || prev.bio,
+            location: profileData.location || prev.location,
+            website: profileData.website || prev.website,
+            companySize: isCompany ? (profileData.company_size || prev.companySize) : prev.companySize,
+            foundedYear: isCompany ? (profileData.founded_year || prev.foundedYear) : prev.foundedYear,
+            trainingPhilosophy: isCompany ? (profileData.training_philosophy || prev.trainingPhilosophy) : prev.trainingPhilosophy,
+            hourlyRate: !isCompany ? (profileData.hourly_rate || prev.hourlyRate) : prev.hourlyRate,
+            skills: !isCompany && profileData.skills ? profileData.skills : prev.skills
           }));
         }
       } catch (error) {
