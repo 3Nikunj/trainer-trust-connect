@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export type Job = {
@@ -140,3 +139,28 @@ export const applyForJob = async (jobId: string, coverNote?: string) => {
     return { success: false, error };
   }
 };
+
+export const cancelJobApplication = async (applicationId: string) => {
+  try {
+    // Get the current user's ID
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, error: "You must be logged in to cancel applications" };
+    }
+    
+    // Delete the application
+    const { data, error } = await supabase
+      .from('job_applications')
+      .delete()
+      .eq('id', applicationId)
+      .eq('trainer_id', user.id) // Ensure the user can only cancel their own applications
+      .select();
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error canceling job application:", error);
+    return { success: false, error };
+  }
+}
