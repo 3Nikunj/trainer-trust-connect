@@ -1,19 +1,22 @@
+
 import { useContext, useState, useEffect } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getJobs } from "@/lib/jobs";
-import { Activity, Briefcase, MessageSquare, Star } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+
+// Import dashboard components
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
+import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
+import { JobListingsTab } from "@/components/dashboard/JobListingsTab";
+import { ApplicantsTab } from "@/components/dashboard/ApplicantsTab";
 
 // Interface for dashboard stats
 interface DashboardStats {
@@ -65,7 +68,7 @@ const Dashboard = () => {
       }
 
       try {
-        // Modified query with proper join syntax
+        // Query with proper join - accessing profiles properly
         const { data: applications, error } = await supabase
           .from('job_applications')
           .select(`
@@ -74,7 +77,7 @@ const Dashboard = () => {
             created_at,
             cover_note,
             trainer_id,
-            profiles(id, full_name, title, avatar_url)
+            profiles:trainer_id(id, full_name, title, avatar_url)
           `)
           .eq('job_id', selectedJobId)
           .order('created_at', { ascending: false });
@@ -221,21 +224,6 @@ const Dashboard = () => {
     }
   };
 
-  // Function to extract company ID from job titles for recent activities
-  const extractCompanyIdFromActivity = (activity, jobsData) => {
-    if (!activity || !jobsData) return null;
-    
-    // For companies looking at applicants, we don't need to extract
-    if (activity.type === 'job') return activity.id;
-    
-    // For applications, try to find the job in jobsData
-    const jobMatch = jobsData?.find(job => 
-      activity.title.includes(job.title)
-    );
-    
-    return jobMatch ? jobMatch.companyId : null;
-  };
-
   // Data for performance chart
   const performanceData = [
     { month: 'Jan', applications: 4, interviews: 2 },
@@ -295,377 +283,55 @@ const Dashboard = () => {
                 </>
               )}
             </TabsList>
+            
             <TabsContent value="overview" className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {isCompany ? "Active Listings" : "Job Applications"}
-                    </CardTitle>
-                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.completedJobs}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.completedJobs > 0 
-                        ? `${isCompany ? 'Active job listings' : 'Applications submitted'}`
-                        : 'No active applications'}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {isCompany ? "Average Rating" : "Review Score"}
-                    </CardTitle>
-                    <Star className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {stats.averageRating > 0 ? stats.averageRating : '-'}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.averageRating > 0 
-                        ? `Based on ${isCompany ? 'trainer' : 'company'} reviews` 
-                        : 'No reviews yet'}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Messages</CardTitle>
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.unreadMessages}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.unreadMessages > 0 
-                        ? 'Unread messages' 
-                        : 'No unread messages'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>
-                    {isCompany 
-                      ? "Recent applications to your job listings" 
-                      : "Your recent job applications and updates"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {recentActivity.length > 0 ? (
-                    <div className="space-y-4">
-                      {recentActivity.map((activity) => {
-                        const jobInfo = activity.title.match(/applied to "(.+)" at (.+)$/);
-                        const companyId = extractCompanyIdFromActivity(activity, jobsData);
-                        
-                        return (
-                          <TableRow key={activity.id}>
-                            <TableCell>
-                              {isCompany ? (
-                                <>
-                                  {activity.title.split(' applied to ')[0] && (
-                                    <Link to={`/profile/${activity.trainerId}`} className="text-brand-600 hover:underline">
-                                      {activity.title.split(' applied to ')[0]}
-                                    </Link>
-                                  )} applied to "{activity.title.match(/"([^"]+)"/)?.[1] || ''}"
-                                </>
-                              ) : (
-                                jobInfo ? jobInfo[1] : activity.title
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {jobInfo && companyId ? (
-                                <Link to={`/profile/${companyId}`} className="text-brand-600 hover:underline">
-                                  {jobInfo[2]}
-                                </Link>
-                              ) : (
-                                jobInfo ? jobInfo[2] : '-'
-                              )}
-                            </TableCell>
-                            <TableCell>{activity.date}</TableCell>
-                            <TableCell className="capitalize">{activity.status}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No recent activity to display.</p>
-                  )}
-                </CardContent>
-              </Card>
+              <DashboardStats 
+                completedJobs={stats.completedJobs}
+                averageRating={stats.averageRating}
+                unreadMessages={stats.unreadMessages}
+                activeListings={stats.activeListings}
+                isCompany={isCompany}
+              />
+              <RecentActivity 
+                activities={recentActivity}
+                isCompany={isCompany}
+                jobsData={jobsData}
+              />
             </TabsContent>
             
             <TabsContent value="applications">
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Job Applications</CardTitle>
-                  <CardDescription>
-                    Track your recent job applications and their status
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <p className="text-sm">Loading applications...</p>
-                  ) : recentActivity.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Job Title</TableHead>
-                          <TableHead>Company</TableHead>
-                          <TableHead>Date Applied</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {recentActivity.map((activity) => {
-                          const jobInfo = activity.title.match(/applied to "(.+)" at (.+)$/);
-                          const companyId = extractCompanyIdFromActivity(activity, jobsData);
-                          
-                          return (
-                            <TableRow key={activity.id}>
-                              <TableCell>{jobInfo ? jobInfo[1] : activity.title}</TableCell>
-                              <TableCell>
-                                {jobInfo && companyId ? (
-                                  <Link to={`/profile/${companyId}`} className="text-brand-600 hover:underline">
-                                    {jobInfo[2]}
-                                  </Link>
-                                ) : (
-                                  jobInfo ? jobInfo[2] : '-'
-                                )}
-                              </TableCell>
-                              <TableCell>{activity.date}</TableCell>
-                              <TableCell className="capitalize">{activity.status}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      You haven't applied to any jobs yet.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+              <ApplicationsTab 
+                loading={loading}
+                activities={recentActivity}
+                jobsData={jobsData}
+              />
             </TabsContent>
             
             <TabsContent value="stats">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Performance Overview</CardTitle>
-                  <CardDescription>
-                    Track your application success rate over time
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={performanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar dataKey="applications" name="Applications" fill="#3B82F6" />
-                      <Bar dataKey="interviews" name="Interviews" fill="#10B981" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+              <PerformanceChart data={performanceData} />
             </TabsContent>
 
             <TabsContent value="jobs">
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Job Listings</CardTitle>
-                  <CardDescription>
-                    Manage your current job listings and track their performance
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <p className="text-sm">Loading job listings...</p>
-                  ) : jobsData && jobsData.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Job Title</TableHead>
-                          <TableHead>Posted Date</TableHead>
-                          <TableHead>Applications</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {jobsData.map((job: any) => (
-                          <TableRow 
-                            key={job.id} 
-                            className={selectedJobId === job.id ? "bg-muted/50" : ""}
-                          >
-                            <TableCell>
-                              <Link to={`/jobs/${job.id}`} className="font-medium hover:underline">
-                                {job.title}
-                              </Link>
-                            </TableCell>
-                            <TableCell>{new Date(job.postedDate).toLocaleDateString()}</TableCell>
-                            <TableCell>{job.applicationCount}</TableCell>
-                            <TableCell className="text-green-600">Active</TableCell>
-                            <TableCell>
-                              <Button 
-                                variant={selectedJobId === job.id ? "secondary" : "outline"} 
-                                size="sm"
-                                onClick={() => handleJobSelect(job.id)}
-                              >
-                                {selectedJobId === job.id ? "Hide Applicants" : "View Applicants"}
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      You haven't posted any jobs yet.
-                    </p>
-                  )}
-                  
-                  {selectedJobId && jobApplicants.length > 0 && (
-                    <div className="mt-8 border-t pt-6">
-                      <h3 className="text-lg font-medium mb-4">
-                        Applicants for {jobsData?.find(j => j.id === selectedJobId)?.title || 'Selected Job'}
-                      </h3>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Applicant</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Applied On</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {jobApplicants.map((applicant) => (
-                            <TableRow key={applicant.id}>
-                              <TableCell>
-                                <Link 
-                                  to={`/profile/${applicant.trainerId}`} 
-                                  className="font-medium text-brand-600 hover:underline flex items-center gap-2"
-                                >
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={applicant.avatar || "/placeholder.svg"} />
-                                    <AvatarFallback>{applicant.trainerName.slice(0,2).toUpperCase()}</AvatarFallback>
-                                  </Avatar>
-                                  {applicant.trainerName}
-                                </Link>
-                              </TableCell>
-                              <TableCell>{applicant.trainerTitle}</TableCell>
-                              <TableCell>{applicant.date}</TableCell>
-                              <TableCell className="capitalize">{applicant.status}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                  
-                  {selectedJobId && jobApplicants.length === 0 && (
-                    <div className="mt-8 border-t pt-6 text-center py-8 text-muted-foreground">
-                      <p>No applicants for this job yet.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <JobListingsTab 
+                loading={loading}
+                jobsData={jobsData || []}
+                jobApplicants={jobApplicants}
+                selectedJobId={selectedJobId}
+                onJobSelect={handleJobSelect}
+              />
             </TabsContent>
             
             <TabsContent value="applicants">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Applicants</CardTitle>
-                  <CardDescription>
-                    Review and manage recent applications to your job listings
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <p className="text-sm">Loading applicants...</p>
-                  ) : recentActivity.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Applicant</TableHead>
-                          <TableHead>Job</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {recentActivity.map((activity) => {
-                          const applicantInfo = activity.title.match(/(.+) applied to "(.+)"/);
-                          return (
-                            <TableRow key={activity.id}>
-                              <TableCell>
-                                {applicantInfo && activity.trainerId ? (
-                                  <Link to={`/profile/${activity.trainerId}`} className="text-brand-600 hover:underline">
-                                    {applicantInfo[1]}
-                                  </Link>
-                                ) : (
-                                  applicantInfo ? applicantInfo[1] : '-'
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {applicantInfo ? (
-                                  <Link to={`/jobs/${activity.jobId}`} className="hover:underline">
-                                    {applicantInfo[2]}
-                                  </Link>
-                                ) : activity.title}
-                              </TableCell>
-                              <TableCell>{activity.date}</TableCell>
-                              <TableCell className="capitalize">{activity.status}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No recent applications to display.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+              <ApplicantsTab 
+                loading={loading}
+                activities={recentActivity}
+              />
             </TabsContent>
           </Tabs>
         </div>
       </main>
     </div>
   );
-};
-
-// Custom tooltip component for the chart
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-background p-3 border rounded-md shadow-md">
-        <p className="font-medium">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <div key={`item-${index}`} className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-sm" 
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-sm">
-              {entry.name}: {entry.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return null;
 };
 
 export default Dashboard;
