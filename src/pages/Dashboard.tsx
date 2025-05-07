@@ -1,3 +1,4 @@
+
 import { useContext, useState, useEffect } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { UserContext } from "@/App";
@@ -30,6 +31,8 @@ interface Activity {
   status: string;
   date: string;
   type: 'application' | 'job' | 'message';
+  trainerId?: string; // Added trainerId for linking to trainer profiles
+  jobId?: string; // Added jobId for filtering applicants by job
 }
 
 const Dashboard = () => {
@@ -42,6 +45,8 @@ const Dashboard = () => {
   });
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [jobApplicants, setJobApplicants] = useState<any[]>([]);
   const isCompany = user?.role === "company";
 
   // Fetch jobs data using React Query
@@ -50,6 +55,54 @@ const Dashboard = () => {
     queryFn: () => getJobs(isCompany, user?.id),
     enabled: !!user
   });
+
+  // Fetch applicants for a selected job
+  useEffect(() => {
+    const fetchJobApplicants = async () => {
+      if (!selectedJobId) {
+        setJobApplicants([]);
+        return;
+      }
+
+      try {
+        const { data: applications, error } = await supabase
+          .from('job_applications')
+          .select(`
+            id,
+            status,
+            created_at,
+            cover_note,
+            trainer_id,
+            profiles!inner(id, full_name, title, avatar_url)
+          `)
+          .eq('job_id', selectedJobId)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        if (applications) {
+          setJobApplicants(applications.map(app => ({
+            id: app.id,
+            trainerId: app.trainer_id,
+            trainerName: app.profiles.full_name || 'Unknown',
+            trainerTitle: app.profiles.title || 'Trainer',
+            avatar: app.profiles.avatar_url,
+            status: app.status,
+            date: new Date(app.created_at).toLocaleDateString(),
+            coverNote: app.cover_note
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching job applicants:', error);
+      }
+    };
+
+    if (isCompany && selectedJobId) {
+      fetchJobApplicants();
+    }
+  }, [selectedJobId, isCompany]);
 
   // Fetch stats data
   useEffect(() => {
@@ -115,6 +168,8 @@ const Dashboard = () => {
             id,
             status,
             created_at,
+            trainer_id,
+            job_id,
             jobs!inner(title, company),
             profiles!inner(full_name)
           `)
@@ -128,7 +183,9 @@ const Dashboard = () => {
             title: `${app.profiles.full_name} applied to "${app.jobs.title}"`,
             status: app.status,
             date: new Date(app.created_at).toLocaleDateString(),
-            type: 'application'
+            type: 'application',
+            trainerId: app.trainer_id,
+            jobId: app.job_id
           }));
         }
       } else {
@@ -139,7 +196,7 @@ const Dashboard = () => {
             id,
             status,
             created_at,
-            jobs!inner(title, company)
+            jobs!inner(title, company, company_id)
           `)
           .eq('trainer_id', user.id)
           .order('created_at', { ascending: false })
@@ -151,7 +208,8 @@ const Dashboard = () => {
             title: `You applied to "${app.jobs.title}" at ${app.jobs.company}`,
             status: app.status,
             date: new Date(app.created_at).toLocaleDateString(),
-            type: 'application'
+            type: 'application',
+            jobId: app.jobs.company_id
           }));
         }
       }
@@ -170,7 +228,7 @@ const Dashboard = () => {
     if (activity.type === 'job') return activity.id;
     
     // For applications, try to find the job in jobsData
-    const jobMatch = jobsData.find(job => 
+    const jobMatch = jobsData?.find(job => 
       activity.title.includes(job.title)
     );
     
@@ -185,6 +243,11 @@ const Dashboard = () => {
     { month: 'Apr', applications: 10, interviews: 6 },
     { month: 'May', applications: 8, interviews: 5 },
   ];
+
+  // Handle job selection for viewing applicants
+  const handleJobSelect = (jobId: string) => {
+    setSelectedJobId(jobId === selectedJobId ? null : jobId);
+  };
 
   if (!user) {
     return <Navigate to="/auth" />;
@@ -300,7 +363,19 @@ const Dashboard = () => {
                         
                         return (
                           <TableRow key={activity.id}>
-                            <TableCell>{jobInfo ? jobInfo[1] : activity.title}</TableCell>
+                            <TableCell>
+                              {isCompany ? (
+                                <>
+                                  {activity.title.split(' applied to ')[0] && (
+                                    <Link to={`/profile/${activity.trainerId}`} className="text-brand-600 hover:underline">
+                                      {activity.title.split(' applied to ')[0]}
+                                    </Link>
+                                  )} applied to "{activity.title.match(/"([^"]+)"/)?.[1] || ''}"
+                                </>
+                              ) : (
+                                jobInfo ? jobInfo[1] : activity.title
+                              )}
+                            </TableCell>
                             <TableCell>
                               {jobInfo && companyId ? (
                                 <Link to={`/profile/${companyId}`} className="text-brand-600 hover:underline">
@@ -420,11 +495,15 @@ const Dashboard = () => {
                           <TableHead>Posted Date</TableHead>
                           <TableHead>Applications</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {jobsData.map((job: any) => (
-                          <TableRow key={job.id}>
+                          <TableRow 
+                            key={job.id} 
+                            className={selectedJobId === job.id ? "bg-muted/50" : ""}
+                          >
                             <TableCell>
                               <Link to={`/jobs/${job.id}`} className="font-medium hover:underline">
                                 {job.title}
@@ -433,6 +512,15 @@ const Dashboard = () => {
                             <TableCell>{new Date(job.postedDate).toLocaleDateString()}</TableCell>
                             <TableCell>{job.applicationCount}</TableCell>
                             <TableCell className="text-green-600">Active</TableCell>
+                            <TableCell>
+                              <Button 
+                                variant={selectedJobId === job.id ? "secondary" : "outline"} 
+                                size="sm"
+                                onClick={() => handleJobSelect(job.id)}
+                              >
+                                {selectedJobId === job.id ? "Hide Applicants" : "View Applicants"}
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -441,6 +529,51 @@ const Dashboard = () => {
                     <p className="text-sm text-muted-foreground">
                       You haven't posted any jobs yet.
                     </p>
+                  )}
+                  
+                  {selectedJobId && jobApplicants.length > 0 && (
+                    <div className="mt-8 border-t pt-6">
+                      <h3 className="text-lg font-medium mb-4">
+                        Applicants for {jobsData?.find(j => j.id === selectedJobId)?.title || 'Selected Job'}
+                      </h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Applicant</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Applied On</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {jobApplicants.map((applicant) => (
+                            <TableRow key={applicant.id}>
+                              <TableCell>
+                                <Link 
+                                  to={`/profile/${applicant.trainerId}`} 
+                                  className="font-medium text-brand-600 hover:underline flex items-center gap-2"
+                                >
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={applicant.avatar || "/placeholder.svg"} />
+                                    <AvatarFallback>{applicant.trainerName.slice(0,2).toUpperCase()}</AvatarFallback>
+                                  </Avatar>
+                                  {applicant.trainerName}
+                                </Link>
+                              </TableCell>
+                              <TableCell>{applicant.trainerTitle}</TableCell>
+                              <TableCell>{applicant.date}</TableCell>
+                              <TableCell className="capitalize">{applicant.status}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                  
+                  {selectedJobId && jobApplicants.length === 0 && (
+                    <div className="mt-8 border-t pt-6 text-center py-8 text-muted-foreground">
+                      <p>No applicants for this job yet.</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -472,8 +605,22 @@ const Dashboard = () => {
                           const applicantInfo = activity.title.match(/(.+) applied to "(.+)"/);
                           return (
                             <TableRow key={activity.id}>
-                              <TableCell>{applicantInfo ? applicantInfo[1] : '-'}</TableCell>
-                              <TableCell>{applicantInfo ? applicantInfo[2] : activity.title}</TableCell>
+                              <TableCell>
+                                {applicantInfo && activity.trainerId ? (
+                                  <Link to={`/profile/${activity.trainerId}`} className="text-brand-600 hover:underline">
+                                    {applicantInfo[1]}
+                                  </Link>
+                                ) : (
+                                  applicantInfo ? applicantInfo[1] : '-'
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {applicantInfo ? (
+                                  <Link to={`/jobs/${activity.jobId}`} className="hover:underline">
+                                    {applicantInfo[2]}
+                                  </Link>
+                                ) : activity.title}
+                              </TableCell>
                               <TableCell>{activity.date}</TableCell>
                               <TableCell className="capitalize">{activity.status}</TableCell>
                             </TableRow>
