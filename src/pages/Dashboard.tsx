@@ -1,4 +1,3 @@
-
 import { useContext, useState, useEffect } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { UserContext } from "@/App";
@@ -14,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getJobs } from "@/lib/jobs";
 import { Activity, Briefcase, MessageSquare, Star } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 // Interface for dashboard stats
 interface DashboardStats {
@@ -65,6 +65,7 @@ const Dashboard = () => {
       }
 
       try {
+        // Modified query with proper join syntax
         const { data: applications, error } = await supabase
           .from('job_applications')
           .select(`
@@ -73,7 +74,7 @@ const Dashboard = () => {
             created_at,
             cover_note,
             trainer_id,
-            profiles!inner(id, full_name, title, avatar_url)
+            profiles(id, full_name, title, avatar_url)
           `)
           .eq('job_id', selectedJobId)
           .order('created_at', { ascending: false });
@@ -86,9 +87,9 @@ const Dashboard = () => {
           setJobApplicants(applications.map(app => ({
             id: app.id,
             trainerId: app.trainer_id,
-            trainerName: app.profiles.full_name || 'Unknown',
-            trainerTitle: app.profiles.title || 'Trainer',
-            avatar: app.profiles.avatar_url,
+            trainerName: app.profiles?.full_name || 'Unknown',
+            trainerTitle: app.profiles?.title || 'Trainer',
+            avatar: app.profiles?.avatar_url,
             status: app.status,
             date: new Date(app.created_at).toLocaleDateString(),
             coverNote: app.cover_note
