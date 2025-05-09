@@ -42,7 +42,7 @@ export const useJobApplicants = (selectedJobId: string | null, isCompany: boolea
             cover_note,
             trainer_id
           `)
-          .eq('job_id', selectedJobId as string)
+          .eq('job_id', selectedJobId)
           .order('created_at', { ascending: false });
 
         if (error) {

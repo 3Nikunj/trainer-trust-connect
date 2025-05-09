@@ -18,7 +18,7 @@ export const useProfileData = (id: string | undefined, currentUserRole?: string)
           const { data: profileData, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', id as string)
+            .eq('id', id)
             .single();
             
           if (error) {

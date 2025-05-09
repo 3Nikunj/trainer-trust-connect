@@ -42,7 +42,7 @@ export const usePerformanceData = (userId: string | undefined) => {
             await supabase
               .from('job_applications')
               .select('*', { count: 'exact', head: true })
-              .eq('trainer_id', userId as string)
+              .eq('trainer_id', userId)
               .gte('created_at', monthData.startDate.toISOString())
               .lte('created_at', monthData.endDate.toISOString());
 
@@ -55,7 +55,7 @@ export const usePerformanceData = (userId: string | undefined) => {
             await supabase
               .from('job_applications')
               .select('*', { count: 'exact', head: true })
-              .eq('trainer_id', userId as string)
+              .eq('trainer_id', userId)
               .eq('status', 'interview')
               .gte('created_at', monthData.startDate.toISOString())
               .lte('created_at', monthData.endDate.toISOString());
