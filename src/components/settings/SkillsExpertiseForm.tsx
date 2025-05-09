@@ -14,6 +14,14 @@ interface SkillsExpertiseFormProps {
   userId: string;
 }
 
+// Type for successful profile data query
+interface ProfileData {
+  skills: string[];
+  experience: string;
+  certifications: Certification[];
+  education: Education[];
+}
+
 export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
   const { toast } = useToast();
   const [skills, setSkills] = useState<string[]>([]);
@@ -31,34 +39,38 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
         const { data, error } = await supabase
           .from('profiles')
           .select('skills, experience, certifications, education')
-          .eq('id', userId)
+          .eq('id', userId as unknown as UUID)
           .single();
 
         if (error) throw error;
 
         if (data) {
-          // Type guard to ensure data has the expected properties
-          setSkills(data.skills || []);
-          setExperience(data.experience || "");
+          // We now know data has our required properties
+          const profileData = data as ProfileData;
           
+          setSkills(profileData.skills || []);
+          setExperience(profileData.experience || "");
+          
+          // Handle certifications data
           let parsedCertifications: Certification[] = [];
-          if (data.certifications) {
+          if (profileData.certifications) {
             try {
-              parsedCertifications = Array.isArray(data.certifications) 
-                ? data.certifications as Certification[]
-                : JSON.parse(JSON.stringify(data.certifications)) as Certification[];
+              parsedCertifications = Array.isArray(profileData.certifications) 
+                ? profileData.certifications as Certification[]
+                : JSON.parse(JSON.stringify(profileData.certifications)) as Certification[];
             } catch (e) {
               console.error("Error parsing certifications:", e);
             }
           }
           setCertifications(parsedCertifications);
           
+          // Handle education data
           let parsedEducation: Education[] = [];
-          if (data.education) {
+          if (profileData.education) {
             try {
-              parsedEducation = Array.isArray(data.education)
-                ? data.education as Education[]
-                : JSON.parse(JSON.stringify(data.education)) as Education[];
+              parsedEducation = Array.isArray(profileData.education)
+                ? profileData.education as Education[]
+                : JSON.parse(JSON.stringify(profileData.education)) as Education[];
             } catch (e) {
               console.error("Error parsing education:", e);
             }
@@ -88,10 +100,10 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
         .update({
           skills,
           experience,
-          certifications: certifications as any,
-          education: education as any
+          certifications: certifications as unknown as Json,
+          education: education as unknown as Json
         })
-        .eq('id', userId);
+        .eq('id', userId as unknown as UUID);
 
       if (error) throw error;
 

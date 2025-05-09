@@ -9,6 +9,9 @@ interface PerformanceData {
   interviews: number;
 }
 
+// Define UUID type explicitly
+type UUID = string;
+
 export const usePerformanceData = (userId: string | undefined) => {
   const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +45,7 @@ export const usePerformanceData = (userId: string | undefined) => {
             await supabase
               .from('job_applications')
               .select('*', { count: 'exact', head: true })
-              .eq('trainer_id', userId)
+              .eq('trainer_id', userId as unknown as UUID)
               .gte('created_at', monthData.startDate.toISOString())
               .lte('created_at', monthData.endDate.toISOString());
 
@@ -55,7 +58,7 @@ export const usePerformanceData = (userId: string | undefined) => {
             await supabase
               .from('job_applications')
               .select('*', { count: 'exact', head: true })
-              .eq('trainer_id', userId)
+              .eq('trainer_id', userId as unknown as UUID)
               .eq('status', 'interview')
               .gte('created_at', monthData.startDate.toISOString())
               .lte('created_at', monthData.endDate.toISOString());

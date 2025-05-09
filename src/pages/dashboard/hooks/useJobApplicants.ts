@@ -21,6 +21,9 @@ interface Applicant {
   coverNote?: string;
 }
 
+// Define UUID type explicitly
+type UUID = string;
+
 export const useJobApplicants = (selectedJobId: string | null, isCompany: boolean) => {
   const [jobApplicants, setJobApplicants] = useState<Applicant[]>([]);
 
@@ -42,7 +45,7 @@ export const useJobApplicants = (selectedJobId: string | null, isCompany: boolea
             cover_note,
             trainer_id
           `)
-          .eq('job_id', selectedJobId)
+          .eq('job_id', selectedJobId as unknown as UUID)
           .order('created_at', { ascending: false });
 
         if (error) {

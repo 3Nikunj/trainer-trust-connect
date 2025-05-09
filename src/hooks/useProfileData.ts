@@ -4,6 +4,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProfileData, TrainerProfile, CompanyProfile, Education } from "@/types/profile";
 import { mockTrainerProfile, mockCompanyProfile } from "@/data/mockProfiles";
 
+// Define interfaces to help with type safety
+interface ProfileResponse {
+  id: string;
+  role?: string;
+  full_name?: string;
+  avatar_url?: string;
+  title?: string;
+  location?: string;
+  bio?: string;
+  skills?: string[];
+  founded_year?: string;
+  company_size?: string;
+  website?: string;
+  training_philosophy?: string;
+  certifications?: any;
+  education?: any;
+  hourly_rate?: string;
+}
+
 export const useProfileData = (id: string | undefined, currentUserRole?: string) => {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,29 +37,32 @@ export const useProfileData = (id: string | undefined, currentUserRole?: string)
           const { data: profileData, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', id)
+            .eq('id', id as unknown as UUID)
             .single();
             
           if (error) {
             console.error('Error fetching profile:', error);
             // If there's an error, we'll fall back to mock data below
           } else if (profileData) {
-            // We found a profile, now let's build the appropriate object
-            if (profileData.role === 'company') {
+            // We found a profile, now let's cast it to our interface to ensure type safety
+            const profile = profileData as ProfileResponse;
+            
+            // Build the appropriate object based on role
+            if (profile.role === 'company') {
               const companyProfile: CompanyProfile = {
-                id: profileData.id,
-                name: profileData.full_name || 'Unknown Company',
+                id: profile.id,
+                name: profile.full_name || 'Unknown Company',
                 role: 'company',
-                avatar: profileData.avatar_url || '/placeholder.svg',
-                title: profileData.title || 'Enterprise Technology Training Provider',
-                location: profileData.location || 'Unknown Location',
-                bio: profileData.bio || 'No company bio available',
-                specializations: profileData.skills || [],
-                foundedYear: parseInt(profileData.founded_year || '2000'),
-                companySize: profileData.company_size || 'Unknown',
-                website: profileData.website || '#',
+                avatar: profile.avatar_url || '/placeholder.svg',
+                title: profile.title || 'Enterprise Technology Training Provider',
+                location: profile.location || 'Unknown Location',
+                bio: profile.bio || 'No company bio available',
+                specializations: profile.skills || [],
+                foundedYear: parseInt(profile.founded_year || '2000'),
+                companySize: profile.company_size || 'Unknown',
+                website: profile.website || '#',
                 industryFocus: ['Technology'], // Default value
-                trainingPhilosophy: profileData.training_philosophy || '',
+                trainingPhilosophy: profile.training_philosophy || '',
                 targetAudience: ['Technical Teams'], // Default value
                 stats: {
                   trainersHired: 0, // Default values
@@ -54,12 +76,12 @@ export const useProfileData = (id: string | undefined, currentUserRole?: string)
               // It's a trainer profile
               // Parse certifications from the database
               let parsedCertifications: string[] = [];
-              if (profileData.certifications) {
+              if (profile.certifications) {
                 try {
                   // Extract certification names from the array of certification objects
-                  const certArray = Array.isArray(profileData.certifications) 
-                    ? profileData.certifications 
-                    : JSON.parse(JSON.stringify(profileData.certifications));
+                  const certArray = Array.isArray(profile.certifications) 
+                    ? profile.certifications 
+                    : JSON.parse(JSON.stringify(profile.certifications));
                   
                   parsedCertifications = certArray.map((cert: any) => {
                     if (typeof cert === 'object' && cert.name) {
@@ -75,11 +97,11 @@ export const useProfileData = (id: string | undefined, currentUserRole?: string)
 
               // Parse education data from the database
               let parsedEducation: Education[] = [];
-              if (profileData.education) {
+              if (profile.education) {
                 try {
-                  const eduArray = Array.isArray(profileData.education)
-                    ? profileData.education
-                    : JSON.parse(JSON.stringify(profileData.education));
+                  const eduArray = Array.isArray(profile.education)
+                    ? profile.education
+                    : JSON.parse(JSON.stringify(profile.education));
                   
                   parsedEducation = eduArray.map((edu: any) => {
                     // Ensure it follows the Education structure
@@ -105,15 +127,15 @@ export const useProfileData = (id: string | undefined, currentUserRole?: string)
               }
 
               const trainerProfile: TrainerProfile = {
-                id: profileData.id,
-                name: profileData.full_name || 'Unknown Trainer',
+                id: profile.id,
+                name: profile.full_name || 'Unknown Trainer',
                 role: 'trainer',
-                avatar: profileData.avatar_url || '/placeholder.svg',
-                title: profileData.title || 'Trainer',
-                location: profileData.location || 'Unknown Location',
-                bio: profileData.bio || 'No trainer bio available',
-                skills: profileData.skills || [],
-                hourlyRate: profileData.hourly_rate || 'Not specified',
+                avatar: profile.avatar_url || '/placeholder.svg',
+                title: profile.title || 'Trainer',
+                location: profile.location || 'Unknown Location',
+                bio: profile.bio || 'No trainer bio available',
+                skills: profile.skills || [],
+                hourlyRate: profile.hourly_rate || 'Not specified',
                 languages: ['English'],
                 education: parsedEducation.length > 0 ? parsedEducation : [
                   {
