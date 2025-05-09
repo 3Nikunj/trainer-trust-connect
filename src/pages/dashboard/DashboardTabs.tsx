@@ -17,6 +17,7 @@ import { ApplicantsTab } from "@/components/dashboard/ApplicantsTab";
 import { useJobApplicants } from "./hooks/useJobApplicants";
 import { useDashboardStats } from "./hooks/useDashboardStats";
 import { useDashboardActivity } from "./hooks/useDashboardActivity";
+import { usePerformanceData } from "./hooks/usePerformanceData";
 
 // Interface for user
 interface UserProps {
@@ -43,19 +44,13 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
   const { stats, loading } = useDashboardStats(user, isCompany);
   const { recentActivity } = useDashboardActivity(user, isCompany);
   
+  // Get performance data
+  const { performanceData, loading: performanceLoading } = usePerformanceData(user?.id);
+  
   // Handle job selection for viewing applicants
   const handleJobSelect = (jobId: string) => {
     setSelectedJobId(jobId === selectedJobId ? null : jobId);
   };
-
-  // Data for performance chart
-  const performanceData = [
-    { month: 'Jan', applications: 4, interviews: 2 },
-    { month: 'Feb', applications: 7, interviews: 3 },
-    { month: 'Mar', applications: 5, interviews: 4 },
-    { month: 'Apr', applications: 10, interviews: 6 },
-    { month: 'May', applications: 8, interviews: 5 },
-  ];
 
   return (
     <Tabs defaultValue="overview" className="space-y-4">
@@ -98,7 +93,7 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
       </TabsContent>
       
       <TabsContent value="stats">
-        <PerformanceChart data={performanceData} />
+        <PerformanceChart data={performanceData} loading={performanceLoading} />
       </TabsContent>
 
       <TabsContent value="jobs">

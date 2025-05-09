@@ -10,6 +10,7 @@ interface PerformanceData {
 
 interface PerformanceChartProps {
   data: PerformanceData[];
+  loading?: boolean;
 }
 
 // Custom tooltip component for the chart
@@ -36,7 +37,41 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export const PerformanceChart = ({ data }: PerformanceChartProps) => {
+export const PerformanceChart = ({ data, loading }: PerformanceChartProps) => {
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Performance Overview</CardTitle>
+          <CardDescription>
+            Track your application success rate over time
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-80 flex items-center justify-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+          <p className="ml-2">Loading performance data...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // If no data or empty array, display a message
+  if (!data || data.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Performance Overview</CardTitle>
+          <CardDescription>
+            Track your application success rate over time
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-80 flex items-center justify-center">
+          <p className="text-muted-foreground">No performance data available yet</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
