@@ -1,4 +1,3 @@
-
 import { useContext, useState, useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { UserContext } from "@/App";
@@ -7,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { supabase } from "@/integrations/supabase/client";
-import { ProfileData, TrainerProfile, CompanyProfile } from "@/types/profile";
+import { ProfileData, TrainerProfile, CompanyProfile, Education } from "@/types/profile";
 
 // Import extracted components
 import { ProfileSidebar } from "@/components/profile/ProfileSidebar";
@@ -33,12 +32,14 @@ const mockTrainerProfile: TrainerProfile = {
     {
       degree: "M.S. Computer Science",
       school: "Stanford University",
-      year: "2012"
+      year: "2012",
+      id: '1'
     },
     {
       degree: "B.S. Software Engineering",
       school: "University of California, Berkeley",
-      year: "2010"
+      year: "2010",
+      id: '2'
     }
   ],
   certifications: [
@@ -198,6 +199,37 @@ const Profile = () => {
                 }
               }
 
+              // Parse education data from the database
+              let parsedEducation: Education[] = [];
+              if (profileData.education) {
+                try {
+                  const eduArray = Array.isArray(profileData.education)
+                    ? profileData.education
+                    : JSON.parse(JSON.stringify(profileData.education));
+                  
+                  parsedEducation = eduArray.map((edu: any) => {
+                    // Ensure it follows the Education structure
+                    if (typeof edu === 'object') {
+                      return {
+                        id: edu.id || crypto.randomUUID(),
+                        degree: edu.degree || 'Unknown Degree',
+                        school: edu.school || 'Unknown School',
+                        year: edu.year || 'Unknown Year'
+                      };
+                    }
+                    return {
+                      id: crypto.randomUUID(),
+                      degree: 'Unknown Degree',
+                      school: 'Unknown School',
+                      year: 'Unknown Year'
+                    };
+                  });
+                } catch (e) {
+                  console.error("Error parsing education data:", e);
+                  parsedEducation = [];
+                }
+              }
+
               const trainerProfile: TrainerProfile = {
                 id: profileData.id,
                 name: profileData.full_name || 'Unknown Trainer',
@@ -209,8 +241,9 @@ const Profile = () => {
                 skills: profileData.skills || [],
                 hourlyRate: profileData.hourly_rate || 'Not specified',
                 languages: ['English'],
-                education: [
+                education: parsedEducation.length > 0 ? parsedEducation : [
                   {
+                    id: 'default-education',
                     degree: 'Education info not available',
                     school: '',
                     year: ''
