@@ -1,4 +1,5 @@
-import { useContext, useState, useEffect } from "react";
+
+import { useContext, useState, useEffect, useRef } from "react";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { MainNav } from "@/components/shared/MainNav";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SkillsExpertiseForm } from "@/components/settings/SkillsExpertiseForm";
+import { Upload } from "lucide-react";
 
 // Define a proper type for profile data
 interface ProfileData {
@@ -42,6 +44,10 @@ const Settings = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
   const isCompany = user?.role === "company";
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Different form state based on user role
   const [profileForm, setProfileForm] = useState({
@@ -93,6 +99,11 @@ const Settings = () => {
             hourlyRate: !isCompany ? (profileData.hourly_rate || prev.hourlyRate) : prev.hourlyRate,
             skills: !isCompany && profileData.skills ? profileData.skills : prev.skills
           }));
+          
+          // Set avatar preview if available
+          if (profileData.avatar_url) {
+            setAvatarPreview(profileData.avatar_url);
+          }
         }
       } catch (error) {
         console.error('Error fetching profile data:', error);
@@ -142,11 +153,73 @@ const Settings = () => {
     const { name, value } = e.target;
     setSecurityForm({ ...securityForm, [name]: value });
   };
+
+  // Handle avatar file selection
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      
+      // Create a preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setAvatarPreview(previewUrl);
+    }
+  };
+  
+  // Handle clicking the avatar to open file selection
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Handle avatar upload and profile update
+  const uploadAvatar = async () => {
+    if (!avatarFile || !user?.id) return null;
+    
+    try {
+      setIsUploading(true);
+      
+      // Create a unique file path for the avatar
+      const fileExt = avatarFile.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+      
+      // Upload the file to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, avatarFile);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL for the uploaded file
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+      
+      return data?.publicUrl;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: "There was an error uploading your avatar."
+      });
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
   
   const handleSaveProfile = async () => {
     if (!user?.id) return;
     
     try {
+      let avatarUrl = null;
+      
+      // If there's a new avatar file, upload it first
+      if (avatarFile) {
+        avatarUrl = await uploadAvatar();
+      }
+      
       // Update profile data in Supabase
       const { error } = await supabase
         .from('profiles')
@@ -156,6 +229,8 @@ const Settings = () => {
           bio: profileForm.bio,
           location: profileForm.location,
           website: profileForm.website,
+          // Only update avatar_url if we have a new one
+          ...(avatarUrl && { avatar_url: avatarUrl }),
           // Include role-specific fields
           ...(isCompany ? {
             company_size: profileForm.companySize,
@@ -175,9 +250,13 @@ const Settings = () => {
         if (!prev) return prev;
         return {
           ...prev,
-          name: profileForm.name
+          name: profileForm.name,
+          avatar: avatarUrl || prev.avatar
         };
       });
+      
+      // Reset the file input
+      setAvatarFile(null);
       
       toast({
         title: "Profile updated",
@@ -278,15 +357,32 @@ const Settings = () => {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="flex flex-col md:flex-row md:items-center gap-4">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name || "User"} />
-                        <AvatarFallback>
-                          {user?.name?.slice(0, 2).toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button variant="outline">Change</Button>
-                        <Button variant="outline">Remove</Button>
+                      <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                        <Avatar className="h-24 w-24 border-2 border-dashed border-gray-300 group-hover:border-brand-500">
+                          <AvatarImage 
+                            src={avatarPreview || user?.avatar || "/placeholder.svg"} 
+                            alt={user?.name || "User"} 
+                          />
+                          <AvatarFallback>
+                            {user?.name?.slice(0, 2).toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Upload className="h-8 w-8 text-white" />
+                        </div>
+                        <input 
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleAvatarChange}
+                        />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium">Profile Photo</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Click on the avatar to upload a new photo
+                        </p>
                       </div>
                     </div>
                     
@@ -418,8 +514,9 @@ const Settings = () => {
                     <Button 
                       className="bg-brand-600 hover:bg-brand-700"
                       onClick={handleSaveProfile}
+                      disabled={isUploading}
                     >
-                      Save Changes
+                      {isUploading ? "Uploading..." : "Save Changes"}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -676,3 +773,4 @@ const Settings = () => {
 };
 
 export default Settings;
+
