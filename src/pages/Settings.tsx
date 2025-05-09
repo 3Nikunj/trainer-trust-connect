@@ -158,6 +158,29 @@ const Settings = () => {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      // Validate file type and size
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          variant: "destructive",
+          title: "Invalid file type",
+          description: "Please select an image file (JPEG, PNG, GIF, or WebP)."
+        });
+        return;
+      }
+      
+      // 5MB max file size
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          variant: "destructive",
+          title: "File too large",
+          description: "Avatar image must be less than 5MB."
+        });
+        return;
+      }
+      
       setAvatarFile(file);
       
       // Create a preview URL
@@ -180,22 +203,25 @@ const Settings = () => {
       
       // Create a unique file path for the avatar
       const fileExt = avatarFile.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
       
       // Upload the file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data } = await supabase.storage
         .from('avatars')
-        .upload(filePath, avatarFile);
+        .upload(filePath, avatarFile, {
+          cacheControl: '3600',
+          upsert: true
+        });
       
       if (uploadError) throw uploadError;
       
       // Get the public URL for the uploaded file
-      const { data } = supabase.storage
+      const { data: publicUrlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
       
-      return data?.publicUrl;
+      return publicUrlData?.publicUrl;
     } catch (error) {
       console.error('Error uploading avatar:', error);
       toast({
@@ -218,6 +244,14 @@ const Settings = () => {
       // If there's a new avatar file, upload it first
       if (avatarFile) {
         avatarUrl = await uploadAvatar();
+        if (!avatarUrl) {
+          // If avatar upload failed, show error but continue with other profile updates
+          toast({
+            variant: "destructive",
+            title: "Avatar upload failed",
+            description: "Your profile will be updated without the new avatar."
+          });
+        }
       }
       
       // Update profile data in Supabase
