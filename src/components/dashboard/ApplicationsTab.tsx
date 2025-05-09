@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import {
   Card,
@@ -64,7 +63,7 @@ export const ApplicationsTab = ({ loading, activities, jobsData }: ApplicationsT
       const { error } = await supabase
         .from('job_applications')
         .delete()
-        .eq('id', applicationId);
+        .eq('id', applicationId as string);
       
       if (error) throw error;
       

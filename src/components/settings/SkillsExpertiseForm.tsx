@@ -31,12 +31,13 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
         const { data, error } = await supabase
           .from('profiles')
           .select('skills, experience, certifications, education')
-          .eq('id', userId)
+          .eq('id', userId as string)
           .single();
 
         if (error) throw error;
 
         if (data) {
+          // Type guard to ensure data has the expected properties
           setSkills(data.skills || []);
           setExperience(data.experience || "");
           
@@ -83,18 +84,18 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
     setIsSubmitting(true);
     try {
       // Convert arrays to format compatible with Json type
-      const certificationsJson = certifications as unknown as Json;
-      const educationJson = education as unknown as Json;
+      const certificationsJson: Json = certifications as unknown as Json;
+      const educationJson: Json = education as unknown as Json;
       
       const { error } = await supabase
         .from('profiles')
         .update({
-          skills: skills,
-          experience: experience,
+          skills,
+          experience,
           certifications: certificationsJson,
           education: educationJson
         })
-        .eq('id', userId);
+        .eq('id', userId as string);
 
       if (error) throw error;
 
