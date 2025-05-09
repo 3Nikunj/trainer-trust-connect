@@ -283,6 +283,27 @@ const Profile = () => {
               setProfileData(companyProfile);
             } else {
               // It's a trainer profile
+              // Parse certifications from the database
+              let parsedCertifications: string[] = [];
+              if (profileData.certifications) {
+                try {
+                  // Extract certification names from the array of certification objects
+                  const certArray = Array.isArray(profileData.certifications) 
+                    ? profileData.certifications 
+                    : JSON.parse(JSON.stringify(profileData.certifications));
+                  
+                  parsedCertifications = certArray.map((cert: any) => {
+                    if (typeof cert === 'object' && cert.name) {
+                      return `${cert.name}${cert.issuer ? ` - ${cert.issuer}` : ''}${cert.year ? ` (${cert.year})` : ''}`;
+                    }
+                    return String(cert);
+                  });
+                } catch (e) {
+                  console.error("Error parsing certifications:", e);
+                  parsedCertifications = [];
+                }
+              }
+
               const trainerProfile: TrainerProfile = {
                 id: profileData.id,
                 name: profileData.full_name || 'Unknown Trainer',
@@ -301,7 +322,7 @@ const Profile = () => {
                     year: ''
                   }
                 ],
-                certifications: [],
+                certifications: parsedCertifications,
                 stats: {
                   completionRate: 95,
                   overallRating: 4.5,
@@ -740,14 +761,22 @@ const Profile = () => {
                         <CardTitle className="text-base">Certifications</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {(profileData as TrainerProfile).certifications.map((cert, index) => (
-                          <div key={index} className="flex gap-3">
-                            <Award className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">{cert}</p>
+                        {(profileData as TrainerProfile).certifications && 
+                         (profileData as TrainerProfile).certifications.length > 0 ? (
+                          (profileData as TrainerProfile).certifications.map((cert, index) => (
+                            <div key={index} className="flex gap-3">
+                              <Award className="h-5 w-5 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium">{cert}</p>
+                              </div>
                             </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-4 text-muted-foreground">
+                            <Award className="h-10 w-10 mx-auto mb-2 text-muted-foreground opacity-30" />
+                            <p>No certifications listed</p>
                           </div>
-                        ))}
+                        )}
                       </CardContent>
                     </Card>
                   </TabsContent>
