@@ -68,7 +68,7 @@ const Dashboard = () => {
       }
 
       try {
-        // Query with proper join - accessing profiles properly
+        // Fixed query to properly join profiles table using separate query
         const { data: applications, error } = await supabase
           .from('job_applications')
           .select(`
@@ -76,8 +76,7 @@ const Dashboard = () => {
             status,
             created_at,
             cover_note,
-            trainer_id,
-            profiles:trainer_id(id, full_name, title, avatar_url)
+            trainer_id
           `)
           .eq('job_id', selectedJobId)
           .order('created_at', { ascending: false });
@@ -86,20 +85,44 @@ const Dashboard = () => {
           throw error;
         }
 
-        if (applications) {
-          setJobApplicants(applications.map(app => ({
-            id: app.id,
-            trainerId: app.trainer_id,
-            trainerName: app.profiles?.full_name || 'Unknown',
-            trainerTitle: app.profiles?.title || 'Trainer',
-            avatar: app.profiles?.avatar_url,
-            status: app.status,
-            date: new Date(app.created_at).toLocaleDateString(),
-            coverNote: app.cover_note
-          })));
+        // If we have applications, fetch the corresponding profiles
+        if (applications && applications.length > 0) {
+          // Get all trainer IDs to fetch their profiles
+          const trainerIds = applications.map(app => app.trainer_id);
+          
+          // Fetch profiles for the trainers
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name, title, avatar_url')
+            .in('id', trainerIds);
+            
+          if (profilesError) {
+            throw profilesError;
+          }
+
+          // Map applications with their corresponding profiles
+          const applicantsWithProfiles = applications.map(app => {
+            const profile = profiles?.find(p => p.id === app.trainer_id) || {};
+            
+            return {
+              id: app.id,
+              trainerId: app.trainer_id,
+              trainerName: profile?.full_name || 'Unknown',
+              trainerTitle: profile?.title || 'Trainer',
+              avatar: profile?.avatar_url,
+              status: app.status,
+              date: new Date(app.created_at).toLocaleDateString(),
+              coverNote: app.cover_note
+            };
+          });
+          
+          setJobApplicants(applicantsWithProfiles);
+        } else {
+          setJobApplicants([]);
         }
       } catch (error) {
         console.error('Error fetching job applicants:', error);
+        setJobApplicants([]);
       }
     };
 
