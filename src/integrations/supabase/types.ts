@@ -117,8 +117,10 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          certifications: Json | null
           company_size: string | null
           created_at: string
+          experience: string | null
           founded_year: string | null
           full_name: string | null
           hourly_rate: string | null
@@ -135,8 +137,10 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          certifications?: Json | null
           company_size?: string | null
           created_at?: string
+          experience?: string | null
           founded_year?: string | null
           full_name?: string | null
           hourly_rate?: string | null
@@ -153,8 +157,10 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          certifications?: Json | null
           company_size?: string | null
           created_at?: string
+          experience?: string | null
           founded_year?: string | null
           full_name?: string | null
           hourly_rate?: string | null

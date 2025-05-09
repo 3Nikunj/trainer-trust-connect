@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Plus, Award, Graduation, BookOpen } from "lucide-react";
+import { X, Plus, Award, GraduationCap, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -46,7 +46,7 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
         if (data) {
           setSkills(data.skills || []);
           setExperience(data.experience || "");
-          setCertifications(data.certifications || []);
+          setCertifications(data.certifications ? JSON.parse(JSON.stringify(data.certifications)) : []);
         }
       } catch (error) {
         console.error('Error fetching profile data:', error);
@@ -232,7 +232,7 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
       {/* Experience section */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Graduation className="h-4 w-4" />
+          <GraduationCap className="h-4 w-4" />
           <Label htmlFor="experience" className="text-base font-medium">Experience</Label>
         </div>
         <Textarea
