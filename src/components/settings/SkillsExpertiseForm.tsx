@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Plus, Award, GraduationCap, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Json } from "@/integrations/supabase/types";
 
 interface Certification {
   id: string;
@@ -91,12 +92,15 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
   const handleSaveChanges = async () => {
     setIsSubmitting(true);
     try {
+      // Convert certifications array to a format compatible with Json type
+      const certificationsJson = certifications as unknown as Json;
+      
       const { error } = await supabase
         .from('profiles')
         .update({
           skills: skills,
           experience: experience,
-          certifications: certifications
+          certifications: certificationsJson
         })
         .eq('id', userId);
 
