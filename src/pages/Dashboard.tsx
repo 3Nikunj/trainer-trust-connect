@@ -38,6 +38,14 @@ interface Activity {
   jobId?: string; // Added jobId for filtering applicants by job
 }
 
+// Interface for profile data
+interface ProfileData {
+  id: string;
+  full_name: string | null;
+  title: string | null;
+  avatar_url: string | null;
+}
+
 const Dashboard = () => {
   const { user } = useContext(UserContext);
   const [stats, setStats] = useState<DashboardStats>({
@@ -102,14 +110,15 @@ const Dashboard = () => {
 
           // Map applications with their corresponding profiles
           const applicantsWithProfiles = applications.map(app => {
-            const profile = profiles?.find(p => p.id === app.trainer_id) || {};
+            // Properly type the profile with defaults if not found
+            const profile = profiles?.find(p => p.id === app.trainer_id) as ProfileData | undefined;
             
             return {
               id: app.id,
               trainerId: app.trainer_id,
               trainerName: profile?.full_name || 'Unknown',
               trainerTitle: profile?.title || 'Trainer',
-              avatar: profile?.avatar_url,
+              avatar: profile?.avatar_url || undefined,
               status: app.status,
               date: new Date(app.created_at).toLocaleDateString(),
               coverNote: app.cover_note
