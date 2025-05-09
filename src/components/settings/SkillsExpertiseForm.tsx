@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
-import { Certification } from "@/types/profile";
+import { Certification, Education } from "@/types/profile";
 import { SkillsSection } from "./skills/SkillsSection";
 import { CertificationsSection } from "./skills/CertificationsSection";
 import { ExperienceSection } from "./skills/ExperienceSection";
+import { EducationSection } from "./skills/EducationSection";
 
 interface SkillsExpertiseFormProps {
   userId: string;
@@ -18,6 +19,7 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
   const [skills, setSkills] = useState<string[]>([]);
   const [experience, setExperience] = useState("");
   const [certifications, setCertifications] = useState<Certification[]>([]);
+  const [education, setEducation] = useState<Education[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch existing skills and experience data
@@ -26,7 +28,7 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('skills, experience, certifications')
+          .select('skills, experience, certifications, education')
           .eq('id', userId)
           .single();
 
@@ -36,6 +38,7 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
           setSkills(data.skills || []);
           setExperience(data.experience || "");
           setCertifications(data.certifications ? JSON.parse(JSON.stringify(data.certifications)) : []);
+          setEducation(data.education ? JSON.parse(JSON.stringify(data.education)) : []);
         }
       } catch (error) {
         console.error('Error fetching profile data:', error);
@@ -48,15 +51,17 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
   const handleSaveChanges = async () => {
     setIsSubmitting(true);
     try {
-      // Convert certifications array to a format compatible with Json type
+      // Convert arrays to format compatible with Json type
       const certificationsJson = certifications as unknown as Json;
+      const educationJson = education as unknown as Json;
       
       const { error } = await supabase
         .from('profiles')
         .update({
           skills: skills,
           experience: experience,
-          certifications: certificationsJson
+          certifications: certificationsJson,
+          education: educationJson
         })
         .eq('id', userId);
 
@@ -90,6 +95,12 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
       <CertificationsSection 
         certifications={certifications}
         onCertificationsChange={setCertifications}
+      />
+
+      {/* Education section */}
+      <EducationSection
+        education={education}
+        onEducationChange={setEducation}
       />
 
       {/* Experience section */}

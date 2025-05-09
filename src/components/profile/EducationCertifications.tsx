@@ -15,17 +15,24 @@ export const EducationCertifications = ({ profileData }: EducationCertifications
           <CardTitle className="text-base">Education</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {profileData.education.map((edu, index) => (
-            <div key={index} className="flex gap-3">
-              <Book className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">{edu.degree}</p>
-                <p className="text-sm text-muted-foreground">
-                  {edu.school}, {edu.year}
-                </p>
+          {profileData.education && profileData.education.length > 0 ? (
+            profileData.education.map((edu, index) => (
+              <div key={index} className="flex gap-3">
+                <Book className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{edu.degree}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {edu.school}, {edu.year}
+                  </p>
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              <Book className="h-10 w-10 mx-auto mb-2 text-muted-foreground opacity-30" />
+              <p>No education information listed</p>
             </div>
-          ))}
+          )}
         </CardContent>
       </Card>
       

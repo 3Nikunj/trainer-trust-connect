@@ -37,6 +37,13 @@ export type Certification = {
   year: string;
 };
 
+export type Education = {
+  id: string;
+  degree: string;
+  school: string;
+  year: string;
+};
+
 export type TrainerProfile = {
   id: string;
   name: string;
@@ -48,7 +55,7 @@ export type TrainerProfile = {
   skills: string[];
   hourlyRate: string;
   languages: string[];
-  education: {
+  education: Education[] | {
     degree: string;
     school: string;
     year: string;
