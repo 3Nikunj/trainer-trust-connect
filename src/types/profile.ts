@@ -30,6 +30,13 @@ export type Review = {
   avatar?: string;
 };
 
+export type Certification = {
+  id: string;
+  name: string;
+  issuer: string;
+  year: string;
+};
+
 export type TrainerProfile = {
   id: string;
   name: string;
