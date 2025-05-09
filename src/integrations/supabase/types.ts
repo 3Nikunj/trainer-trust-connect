@@ -120,6 +120,7 @@ export type Database = {
           certifications: Json | null
           company_size: string | null
           created_at: string
+          education: Json | null
           experience: string | null
           founded_year: string | null
           full_name: string | null
@@ -140,6 +141,7 @@ export type Database = {
           certifications?: Json | null
           company_size?: string | null
           created_at?: string
+          education?: Json | null
           experience?: string | null
           founded_year?: string | null
           full_name?: string | null
@@ -160,6 +162,7 @@ export type Database = {
           certifications?: Json | null
           company_size?: string | null
           created_at?: string
+          education?: Json | null
           experience?: string | null
           founded_year?: string | null
           full_name?: string | null

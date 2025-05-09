@@ -21,10 +21,12 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [education, setEducation] = useState<Education[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch existing skills and experience data
   useEffect(() => {
     const fetchProfileData = async () => {
+      setIsLoading(true);
       try {
         const { data, error } = await supabase
           .from('profiles')
@@ -37,16 +39,45 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
         if (data) {
           setSkills(data.skills || []);
           setExperience(data.experience || "");
-          setCertifications(data.certifications ? JSON.parse(JSON.stringify(data.certifications)) : []);
-          setEducation(data.education ? JSON.parse(JSON.stringify(data.education)) : []);
+          
+          let parsedCertifications: Certification[] = [];
+          if (data.certifications) {
+            try {
+              parsedCertifications = Array.isArray(data.certifications) 
+                ? data.certifications as Certification[]
+                : JSON.parse(JSON.stringify(data.certifications)) as Certification[];
+            } catch (e) {
+              console.error("Error parsing certifications:", e);
+            }
+          }
+          setCertifications(parsedCertifications);
+          
+          let parsedEducation: Education[] = [];
+          if (data.education) {
+            try {
+              parsedEducation = Array.isArray(data.education)
+                ? data.education as Education[]
+                : JSON.parse(JSON.stringify(data.education)) as Education[];
+            } catch (e) {
+              console.error("Error parsing education:", e);
+            }
+          }
+          setEducation(parsedEducation);
         }
       } catch (error) {
         console.error('Error fetching profile data:', error);
+        toast({
+          variant: "destructive",
+          title: "Failed to load profile",
+          description: "There was an error loading your profile data."
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchProfileData();
-  }, [userId]);
+  }, [userId, toast]);
 
   const handleSaveChanges = async () => {
     setIsSubmitting(true);
@@ -82,6 +113,10 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return <div className="text-center py-4">Loading your profile data...</div>;
+  }
 
   return (
     <div className="space-y-6">
