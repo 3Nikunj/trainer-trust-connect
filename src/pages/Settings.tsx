@@ -1,4 +1,3 @@
-
 import { useContext, useState, useEffect } from "react";
 import { UserContext } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { SkillsExpertiseForm } from "@/components/settings/SkillsExpertiseForm";
 
 // Define a proper type for profile data
 interface ProfileData {
@@ -33,6 +33,8 @@ interface ProfileData {
   updated_at: string;
   username: string | null;
   website: string | null;
+  experience: string | null;
+  certifications: any[] | null;
 }
 
 const Settings = () => {
@@ -431,9 +433,7 @@ const Settings = () => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        Coming soon: Add and manage your skills, certifications, and expertise.
-                      </p>
+                      {user?.id && <SkillsExpertiseForm userId={user.id} />}
                     </CardContent>
                   </Card>
                 )}
