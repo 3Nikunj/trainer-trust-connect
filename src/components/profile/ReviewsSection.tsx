@@ -14,7 +14,7 @@ interface ReviewsSectionProps {
 // StarRating component
 const StarRating = ({ rating }: { rating: number }) => {
   const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 !== 0;
+  const hasHalfStar = rating % 1 >= 0.5;
   const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
   
   return (
@@ -23,10 +23,10 @@ const StarRating = ({ rating }: { rating: number }) => {
         <Star key={`full-${i}`} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
       ))}
       {hasHalfStar && (
-        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+        <Star className="h-4 w-4 fill-yellow-400/50 text-yellow-400" />
       )}
       {[...Array(emptyStars)].map((_, i) => (
-        <Star key={`empty-${i}`} className="h-4 w-4 text-yellow-400" />
+        <Star key={`empty-${i}`} className="h-4 w-4 text-yellow-400/30" />
       ))}
     </div>
   );
@@ -65,18 +65,20 @@ export const ReviewsSection = ({ reviews, isOwnProfile }: ReviewsSectionProps) =
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{review.content}</p>
                 
-                {/* Display categories if they exist */}
-                {review.categories && (
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-3">
-                    {Object.entries(review.categories).filter(([, value]) => value).map(([key, value]) => (
-                      <div key={key} className="bg-muted/40 p-2 rounded-md text-center">
-                        <div className="mb-1">
-                          <p className="capitalize text-xs font-medium">{key}</p>
-                          <p className="text-[10px] text-muted-foreground">{getCategoryDescription(key)}</p>
+                {/* Display categories dynamically based on what's available in the review */}
+                {review.categories && Object.keys(review.categories).length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mt-3">
+                    {Object.entries(review.categories)
+                      .filter(([, value]) => value > 0) // Only show categories with ratings
+                      .map(([key, value]) => (
+                        <div key={key} className="bg-muted/40 p-2 rounded-md text-center">
+                          <div className="mb-1">
+                            <p className="capitalize text-xs font-medium">{key}</p>
+                            <p className="text-[10px] text-muted-foreground">{getCategoryDescription(key)}</p>
+                          </div>
+                          <StarRating rating={value} />
                         </div>
-                        <StarRating rating={value} />
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </div>
