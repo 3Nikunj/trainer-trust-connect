@@ -20,6 +20,7 @@ import Messages from "./pages/Messages";
 import ChatRoom from "./pages/ChatRoom";
 import Reviews from "./pages/Reviews";
 import Settings from "./pages/Settings";
+import TrainerSearch from "./pages/TrainerSearch";
 
 // Context
 export type UserRole = 'trainer' | 'company' | 'admin' | null;
@@ -142,6 +143,10 @@ const App = () => {
               <Route
                 path="/settings"
                 element={user ? <Settings /> : <Navigate to="/login" replace />}
+              />
+              <Route
+                path="/trainer-search"
+                element={user?.role === 'company' ? <TrainerSearch /> : <Navigate to="/login" replace />}
               />
               <Route path="*" element={<NotFound />} />
             </Routes>

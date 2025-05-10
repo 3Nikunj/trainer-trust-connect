@@ -6,6 +6,7 @@ import { UserNav } from "@/components/shared/UserNav";
 import { MainNav } from "@/components/shared/MainNav";
 import { Button } from "@/components/ui/button";
 import { DashboardTabs } from "./DashboardTabs";
+import { Search } from "lucide-react";
 
 const DashboardLayout = () => {
   const { user } = useContext(UserContext);
@@ -33,11 +34,21 @@ const DashboardLayout = () => {
                 Welcome back, {user.name || "User"}!
               </p>
             </div>
-            {user.role === "company" && (
-              <Button className="bg-brand-600 hover:bg-brand-700" size="sm">
-                <Link to="/create-job" className="text-white">Post New Job</Link>
-              </Button>
-            )}
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+              {user.role === "company" && (
+                <>
+                  <Button className="bg-brand-600 hover:bg-brand-700" size="sm">
+                    <Link to="/create-job" className="text-white">Post New Job</Link>
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Link to="/trainer-search" className="flex items-center">
+                      <Search className="mr-1 h-4 w-4" />
+                      Find Trainers
+                    </Link>
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           <DashboardTabs user={user} />

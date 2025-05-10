@@ -1,82 +1,65 @@
 
-import { useContext } from "react";
+import * as React from "react";
+import { Link, useLocation } from "react-router-dom";
 import { UserContext } from "@/App";
 import { cn } from "@/lib/utils";
-import { Link, useLocation } from "react-router-dom";
 
-export function MainNav({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLElement>) {
-  const { user } = useContext(UserContext);
+export function MainNav() {
+  const { user } = React.useContext(UserContext);
   const location = useLocation();
-
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
-
+  
+  const isActive = (path: string) => location.pathname.startsWith(path);
+  
   return (
-    <nav
-      className={cn("flex items-center space-x-4 lg:space-x-6", className)}
-      {...props}
-    >
+    <nav className="flex items-center space-x-4 lg:space-x-6">
       <Link
         to="/"
-        className="text-xl font-bold text-brand-600 flex items-center"
+        className="text-sm font-medium transition-colors hover:text-primary"
       >
-        TrainerTrust
+        Home
       </Link>
-      
-      {user && (
+      {user ? (
         <>
           <Link
             to="/dashboard"
             className={cn(
               "text-sm font-medium transition-colors hover:text-primary",
-              isActive("/dashboard")
-                ? "text-foreground"
-                : "text-muted-foreground"
+              isActive("/dashboard") && "text-primary"
             )}
           >
             Dashboard
           </Link>
           <Link
-            to={user.role === "trainer" ? "/jobs" : "/jobs"}
+            to="/jobs"
             className={cn(
               "text-sm font-medium transition-colors hover:text-primary",
-              isActive("/jobs") || location.pathname.startsWith("/jobs/")
-                ? "text-foreground"
-                : "text-muted-foreground"
+              isActive("/jobs") && "text-primary"
             )}
           >
-            {user.role === "trainer" ? "Find Jobs" : "My Jobs"}
+            Jobs
           </Link>
-          {user.role === "company" && (
-            <Link
-              to="/create-job"
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                isActive("/create-job")
-                  ? "text-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              Post Job
-            </Link>
-          )}
           <Link
             to="/messages"
             className={cn(
               "text-sm font-medium transition-colors hover:text-primary",
-              isActive("/messages") || location.pathname.startsWith("/messages/")
-                ? "text-foreground"
-                : "text-muted-foreground"
+              isActive("/messages") && "text-primary"
             )}
           >
             Messages
           </Link>
+          {user.role === 'company' && (
+            <Link
+              to="/trainer-search"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                isActive("/trainer-search") && "text-primary"
+              )}
+            >
+              Find Trainers
+            </Link>
+          )}
         </>
-      )}
+      ) : null}
     </nav>
   );
 }
