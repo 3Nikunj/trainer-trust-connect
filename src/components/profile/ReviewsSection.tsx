@@ -5,6 +5,7 @@ import { Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Review } from "@/types/profile";
 import { getCategoryDescription } from "@/utils/supabaseHelpers";
+import { ReviewEmptyState } from "@/components/reviews/ReviewEmptyState";
 
 interface ReviewsSectionProps {
   reviews?: Review[];
@@ -33,6 +34,8 @@ const StarRating = ({ rating }: { rating: number }) => {
 };
 
 export const ReviewsSection = ({ reviews, isOwnProfile }: ReviewsSectionProps) => {
+  console.log("Reviews in ReviewsSection:", reviews);
+
   return (
     <Card>
       <CardHeader>
@@ -85,10 +88,10 @@ export const ReviewsSection = ({ reviews, isOwnProfile }: ReviewsSectionProps) =
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <Star className="h-12 w-12 mx-auto mb-4 text-yellow-400 opacity-30" />
-            <p>No reviews yet</p>
-          </div>
+          <ReviewEmptyState
+            message="No reviews yet"
+            description="This profile hasn't received any reviews yet"
+          />
         )}
         
         {!isOwnProfile && (

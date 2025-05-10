@@ -66,7 +66,7 @@ export const ProfileContent = ({ profileData, isOwnProfile }: ProfileContentProp
           
           <TabsContent value="reviews" className="space-y-4 mt-4">
             <ReviewsSection 
-              reviews={isCompany ? (profileData as CompanyProfile).reviews : undefined}
+              reviews={profileData.reviews}
               isOwnProfile={isOwnProfile}
             />
           </TabsContent>

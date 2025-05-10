@@ -63,6 +63,7 @@ export type TrainerProfile = {
     year: string;
   }[];
   certifications: string[];
+  reviews?: Review[];
   stats: TrainerStats;
 };
 

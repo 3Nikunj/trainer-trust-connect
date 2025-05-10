@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ProfileData, TrainerProfile, CompanyProfile, Education } from "@/types/profile";
+import { ProfileData, TrainerProfile, CompanyProfile, Education, Review } from "@/types/profile";
 import { mockTrainerProfile, mockCompanyProfile } from "@/data/mockProfiles";
-import { asUUID } from "@/utils/supabaseHelpers";
+import { asUUID, getCategoryDescription } from "@/utils/supabaseHelpers";
 
 // Define interfaces to help with type safety
 interface ProfileResponse {
@@ -48,6 +48,53 @@ export const useProfileData = (id: string | undefined, currentUserRole?: string)
             // We found a profile, now handle the data safely
             const profile = profileData as ProfileResponse;
             
+            // Fetch reviews for this profile
+            const { data: reviewsData } = await supabase
+              .from('reviews')
+              .select('*')
+              .eq('reviewee_id', asUUID(id));
+
+            // Process reviews with additional information
+            const reviews: Review[] = await Promise.all((reviewsData || []).map(async (review) => {
+              // Get reviewer info
+              const { data: reviewerData } = await supabase
+                .from('profiles')
+                .select('full_name, avatar_url, role')
+                .eq('id', review.reviewer_id)
+                .single();
+              
+              const categories: Record<string, number> = {};
+              const reviewerRole = reviewerData?.role || 'trainer';
+              
+              // Populate categories based on reviewer role
+              if (reviewerRole === 'company') {
+                // Company reviewing a trainer
+                categories.expertise = review.rating_expertise || 0;
+                categories.communication = review.rating_communication || 0;
+                categories.professionalism = review.rating_professionalism || 0;
+                categories.curriculum = review.rating_curriculum || 0;
+                categories.delivery = review.rating_delivery || 0;
+              } else {
+                // Trainer reviewing a company
+                categories.communication = review.rating_communication || 0;
+                categories.requirements = review.rating_requirements || 0;
+                categories.support = review.rating_support || 0;
+                categories.professionalism = review.rating_professionalism || 0;
+                categories.payment = review.rating_payment || 0;
+              }
+
+              return {
+                id: review.id,
+                author: reviewerData?.full_name || 'Anonymous User',
+                rating: review.rating,
+                date: review.created_at,
+                content: review.review,
+                avatar: reviewerData?.avatar_url || undefined,
+                categories,
+                reviewerRole: reviewerRole as 'company' | 'trainer',
+              };
+            }));
+              
             // Build the appropriate object based on role
             if (profile.role === 'company') {
               const companyProfile: CompanyProfile = {
@@ -65,9 +112,12 @@ export const useProfileData = (id: string | undefined, currentUserRole?: string)
                 industryFocus: ['Technology'], // Default value
                 trainingPhilosophy: profile.training_philosophy || '',
                 targetAudience: ['Technical Teams'], // Default value
+                reviews: reviews,
                 stats: {
                   trainersHired: 0, // Default values
-                  averageRating: 4.5,
+                  averageRating: reviews.length > 0 
+                    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
+                    : 4.5,
                   trainingPrograms: 0,
                   paymentReliability: 95
                 }
@@ -147,9 +197,12 @@ export const useProfileData = (id: string | undefined, currentUserRole?: string)
                   }
                 ],
                 certifications: parsedCertifications,
+                reviews: reviews, // Add reviews to trainer profiles too
                 stats: {
                   completionRate: 95,
-                  overallRating: 4.5,
+                  overallRating: reviews.length > 0 
+                    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
+                    : 4.5,
                   trainingsCompleted: 0,
                   repeatHireRate: 70
                 }
