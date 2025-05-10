@@ -1,5 +1,5 @@
 
-import { TrainerProfile, CompanyProfile } from "@/types/profile";
+import { TrainerProfile, CompanyProfile, Review } from "@/types/profile";
 
 // Mock data for fallback purposes
 export const mockTrainerProfile: TrainerProfile = {
@@ -85,7 +85,14 @@ export const mockCompanyProfile: CompanyProfile = {
       rating: 5,
       date: "2024-03-15",
       content: "TechLearn provided exceptional training for our development team. Their hands-on approach and expert trainers made complex concepts accessible to everyone.",
-      avatar: "/placeholder.svg"
+      avatar: "/placeholder.svg",
+      categories: {
+        expertise: 5,
+        communication: 4,
+        professionalism: 5,
+        curriculum: 5,
+        delivery: 4
+      }
     },
     {
       id: "review2",
@@ -93,7 +100,14 @@ export const mockCompanyProfile: CompanyProfile = {
       rating: 4.5,
       date: "2024-02-20",
       content: "The customized curriculum perfectly addressed our team's skill gaps. Great communication throughout the process and excellent follow-up materials.",
-      avatar: "/placeholder.svg"
+      avatar: "/placeholder.svg",
+      categories: {
+        expertise: 5,
+        communication: 4,
+        professionalism: 4,
+        curriculum: 5,
+        delivery: 4
+      }
     },
     {
       id: "review3",
@@ -101,7 +115,14 @@ export const mockCompanyProfile: CompanyProfile = {
       rating: 5,
       date: "2024-01-10",
       content: "We've worked with TechLearn for three consecutive years for our onboarding program. Their training consistently receives top ratings from new hires.",
-      avatar: "/placeholder.svg"
+      avatar: "/placeholder.svg",
+      categories: {
+        expertise: 5,
+        communication: 5,
+        professionalism: 5,
+        curriculum: 4,
+        delivery: 5
+      }
     }
   ],
   stats: {
