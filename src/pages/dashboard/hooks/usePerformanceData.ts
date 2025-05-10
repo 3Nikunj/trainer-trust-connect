@@ -2,15 +2,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { asUUID } from "@/utils/supabaseHelpers";
 
 interface PerformanceData {
   month: string;
   applications: number;
   interviews: number;
 }
-
-// Define UUID type explicitly
-type UUID = string;
 
 export const usePerformanceData = (userId: string | undefined) => {
   const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
@@ -45,7 +43,7 @@ export const usePerformanceData = (userId: string | undefined) => {
             await supabase
               .from('job_applications')
               .select('*', { count: 'exact', head: true })
-              .eq('trainer_id', userId as unknown as UUID)
+              .eq('trainer_id', asUUID(userId))
               .gte('created_at', monthData.startDate.toISOString())
               .lte('created_at', monthData.endDate.toISOString());
 
@@ -58,7 +56,7 @@ export const usePerformanceData = (userId: string | undefined) => {
             await supabase
               .from('job_applications')
               .select('*', { count: 'exact', head: true })
-              .eq('trainer_id', userId as unknown as UUID)
+              .eq('trainer_id', asUUID(userId))
               .eq('status', 'interview')
               .gte('created_at', monthData.startDate.toISOString())
               .lte('created_at', monthData.endDate.toISOString());

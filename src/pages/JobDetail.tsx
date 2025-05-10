@@ -14,6 +14,7 @@ import type { Job } from "@/lib/jobs";
 import { applyForJob } from "@/lib/jobs";
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
+import { asUUID } from "@/utils/supabaseHelpers";
 
 const jobData = {
   id: "job1",
@@ -75,8 +76,8 @@ const JobDetail = () => {
           const { data: application } = await supabase
             .from('job_applications')
             .select()
-            .eq('job_id', id)
-            .eq('trainer_id', user.id)
+            .eq('job_id', asUUID(id))
+            .eq('trainer_id', asUUID(user.id))
             .single();
           
           setHasApplied(!!application);
@@ -85,7 +86,7 @@ const JobDetail = () => {
         const { data, error: queryError } = await supabase
           .from('jobs')
           .select('*')
-          .eq('id', id)
+          .eq('id', asUUID(id))
           .single();
 
         if (queryError) throw queryError;
@@ -199,226 +200,228 @@ const JobDetail = () => {
         </div>
       </header>
       <main className="flex-1">
-        <div className="container py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              {/* Job Header */}
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold">{job.title}</h1>
-                    <div className="flex items-center mt-2">
-                      <a href={`/profile/${job.companyId}`} className="flex items-center hover:text-brand-600">
-                        <Avatar className="h-6 w-6 mr-2">
+        {!loading && !error && job && (
+          <div className="container py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-6">
+                {/* Job Header */}
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h1 className="text-3xl font-bold">{job.title}</h1>
+                      <div className="flex items-center mt-2">
+                        <a href={`/profile/${job.companyId}`} className="flex items-center hover:text-brand-600">
+                          <Avatar className="h-6 w-6 mr-2">
+                            <AvatarImage src="/placeholder.svg" alt={job.company} />
+                            <AvatarFallback>{job.company.slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{job.company}</span>
+                        </a>
+                        <div className="flex items-center ml-3 text-amber-500">
+                          <Star className="h-4 w-4 fill-amber-500 mr-1" />
+                          <span>{job.companyRating}</span>
+                        </div>
+                        <Badge variant="outline" className="ml-3">
+                          {job.locationType}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {isTrainer && (
+                      <Button className="bg-brand-600 hover:bg-brand-700">
+                        Apply Now
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                    <div className="flex items-center">
+                      <MapPin className="h-5 w-5 mr-2 text-brand-600" />
+                      <div>
+                        <p className="text-sm font-medium">Location</p>
+                        <p className="text-sm text-muted-foreground">{job.location}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <Calendar className="h-5 w-5 mr-2 text-brand-600" />
+                      <div>
+                        <p className="text-sm font-medium">Start Date</p>
+                        <p className="text-sm text-muted-foreground">{job.startDate}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <Clock className="h-5 w-5 mr-2 text-brand-600" />
+                      <div>
+                        <p className="text-sm font-medium">Duration</p>
+                        <p className="text-sm text-muted-foreground">{job.duration}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <Briefcase className="h-5 w-5 mr-2 text-brand-600" />
+                      <div>
+                        <p className="text-sm font-medium">Compensation</p>
+                        <p className="text-sm text-muted-foreground">{job.rate}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <Users className="h-5 w-5 mr-2 text-brand-600" />
+                      <div>
+                        <p className="text-sm font-medium">Audience</p>
+                        <p className="text-sm text-muted-foreground">{job.audience}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <BookOpen className="h-5 w-5 mr-2 text-brand-600" />
+                      <div>
+                        <p className="text-sm font-medium">Applications</p>
+                        <p className="text-sm text-muted-foreground">{job.applicationCount} trainers</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Job Details Tabs */}
+                <Tabs defaultValue="description" className="w-full">
+                  <TabsList className="w-full justify-start">
+                    <TabsTrigger value="description">Description</TabsTrigger>
+                    <TabsTrigger value="requirements">Requirements</TabsTrigger>
+                    <TabsTrigger value="company">Company</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="description" className="space-y-4 mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Job Description</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p>{job.description}</p>
+                        
+                        <div className="space-y-2">
+                          <h3 className="font-semibold">Responsibilities:</h3>
+                          <ul className="list-disc pl-5 space-y-1">
+                            {job.responsibilities.map((item, index) => (
+                              <li key={index} className="text-muted-foreground">{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2 pt-4">
+                          <h3 className="w-full font-semibold mb-2">Required Skills:</h3>
+                          {job.skills.map(skill => (
+                            <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                  
+                  <TabsContent value="requirements" className="space-y-4 mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Requirements</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-3">
+                          {job.requirements.map((req, index) => (
+                            <li key={index} className="flex items-start">
+                              <CheckCircle className="h-5 w-5 mr-2 text-teal-600 flex-shrink-0 mt-0.5" />
+                              <span>{req}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                  
+                  <TabsContent value="company" className="space-y-4 mt-4">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center">
+                        <Avatar className="h-10 w-10 mr-3">
                           <AvatarImage src="/placeholder.svg" alt={job.company} />
                           <AvatarFallback>{job.company.slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
-                        <span className="font-medium">{job.company}</span>
-                      </a>
-                      <div className="flex items-center ml-3 text-amber-500">
-                        <Star className="h-4 w-4 fill-amber-500 mr-1" />
-                        <span>{job.companyRating}</span>
-                      </div>
-                      <Badge variant="outline" className="ml-3">
-                        {job.locationType}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  {isTrainer && (
-                    <Button className="bg-brand-600 hover:bg-brand-700">
-                      Apply Now
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
-                  <div className="flex items-center">
-                    <MapPin className="h-5 w-5 mr-2 text-brand-600" />
-                    <div>
-                      <p className="text-sm font-medium">Location</p>
-                      <p className="text-sm text-muted-foreground">{job.location}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className="h-5 w-5 mr-2 text-brand-600" />
-                    <div>
-                      <p className="text-sm font-medium">Start Date</p>
-                      <p className="text-sm text-muted-foreground">{job.startDate}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <Clock className="h-5 w-5 mr-2 text-brand-600" />
-                    <div>
-                      <p className="text-sm font-medium">Duration</p>
-                      <p className="text-sm text-muted-foreground">{job.duration}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <Briefcase className="h-5 w-5 mr-2 text-brand-600" />
-                    <div>
-                      <p className="text-sm font-medium">Compensation</p>
-                      <p className="text-sm text-muted-foreground">{job.rate}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <Users className="h-5 w-5 mr-2 text-brand-600" />
-                    <div>
-                      <p className="text-sm font-medium">Audience</p>
-                      <p className="text-sm text-muted-foreground">{job.audience}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <BookOpen className="h-5 w-5 mr-2 text-brand-600" />
-                    <div>
-                      <p className="text-sm font-medium">Applications</p>
-                      <p className="text-sm text-muted-foreground">{job.applicationCount} trainers</p>
-                    </div>
-                  </div>
-                </div>
+                        <div>
+                          <CardTitle>{job.company}</CardTitle>
+                          <CardDescription className="flex items-center">
+                            <Star className="h-3 w-3 fill-amber-500 mr-1" />
+                            <span>{job.companyRating} rating</span>
+                          </CardDescription>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="mb-4">This company specializes in providing training solutions.</p>
+                        <Button variant="outline" asChild>
+                          <Link to={`/profile/${job.companyId}`}>View Company Profile</Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
               </div>
               
-              {/* Job Details Tabs */}
-              <Tabs defaultValue="description" className="w-full">
-                <TabsList className="w-full justify-start">
-                  <TabsTrigger value="description">Description</TabsTrigger>
-                  <TabsTrigger value="requirements">Requirements</TabsTrigger>
-                  <TabsTrigger value="company">Company</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="description" className="space-y-4 mt-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Job Description</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p>{job.description}</p>
-                      
-                      <div className="space-y-2">
-                        <h3 className="font-semibold">Responsibilities:</h3>
-                        <ul className="list-disc pl-5 space-y-1">
-                          {job.responsibilities.map((item, index) => (
-                            <li key={index} className="text-muted-foreground">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2 pt-4">
-                        <h3 className="w-full font-semibold mb-2">Required Skills:</h3>
-                        {job.skills.map(skill => (
-                          <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="requirements" className="space-y-4 mt-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Requirements</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-3">
-                        {job.requirements.map((req, index) => (
-                          <li key={index} className="flex items-start">
-                            <CheckCircle className="h-5 w-5 mr-2 text-teal-600 flex-shrink-0 mt-0.5" />
-                            <span>{req}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="company" className="space-y-4 mt-4">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center">
-                      <Avatar className="h-10 w-10 mr-3">
-                        <AvatarImage src="/placeholder.svg" alt={job.company} />
-                        <AvatarFallback>{job.company.slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle>{job.company}</CardTitle>
-                        <CardDescription className="flex items-center">
-                          <Star className="h-3 w-3 fill-amber-500 mr-1" />
-                          <span>{job.companyRating} rating</span>
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="mb-4">This company specializes in providing training solutions.</p>
-                      <Button variant="outline" asChild>
-                        <Link to={`/profile/${job.companyId}`}>View Company Profile</Link>
+              {/* Application Sidebar */}
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl">Apply for this Position</CardTitle>
+                    <CardDescription>
+                      Submit your application to express interest
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Job Posted</p>
+                      <p className="text-sm text-muted-foreground">{job.postedDate}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Applications</p>
+                      <p className="text-sm text-muted-foreground">{job.applicationCount} trainers have applied</p>
+                    </div>
+                  </CardContent>
+                  {isTrainer ? (
+                    <CardFooter>
+                      <Button 
+                        className="w-full bg-brand-600 hover:bg-brand-700" 
+                        onClick={handleApply}
+                        disabled={hasApplied || applying}
+                      >
+                        {applying ? "Submitting..." : hasApplied ? "Already Applied" : "Apply Now"}
                       </Button>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </div>
-            
-            {/* Application Sidebar */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Apply for this Position</CardTitle>
-                  <CardDescription>
-                    Submit your application to express interest
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Job Posted</p>
-                    <p className="text-sm text-muted-foreground">{job.postedDate}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Applications</p>
-                    <p className="text-sm text-muted-foreground">{job.applicationCount} trainers have applied</p>
-                  </div>
-                </CardContent>
-                {isTrainer ? (
+                    </CardFooter>
+                  ) : (
+                    <CardFooter className="flex-col space-y-4">
+                      <div className="flex items-center text-amber-500 w-full bg-amber-50 p-3 rounded-md">
+                        <AlertCircle className="h-5 w-5 mr-2" />
+                        <span className="text-sm">Only trainers can apply for jobs</span>
+                      </div>
+                      {!user && (
+                        <Button variant="outline" className="w-full" asChild>
+                          <a href="/register">Register as a Trainer</a>
+                        </Button>
+                      )}
+                    </CardFooter>
+                  )}
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Similar Jobs</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      No similar jobs found at the moment.
+                    </p>
+                  </CardContent>
                   <CardFooter>
-                    <Button 
-                      className="w-full bg-brand-600 hover:bg-brand-700" 
-                      onClick={handleApply}
-                      disabled={hasApplied || applying}
-                    >
-                      {applying ? "Submitting..." : hasApplied ? "Already Applied" : "Apply Now"}
+                    <Button variant="outline" className="w-full" asChild>
+                      <a href="/jobs">Browse All Jobs</a>
                     </Button>
                   </CardFooter>
-                ) : (
-                  <CardFooter className="flex-col space-y-4">
-                    <div className="flex items-center text-amber-500 w-full bg-amber-50 p-3 rounded-md">
-                      <AlertCircle className="h-5 w-5 mr-2" />
-                      <span className="text-sm">Only trainers can apply for jobs</span>
-                    </div>
-                    {!user && (
-                      <Button variant="outline" className="w-full" asChild>
-                        <a href="/register">Register as a Trainer</a>
-                      </Button>
-                    )}
-                  </CardFooter>
-                )}
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Similar Jobs</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    No similar jobs found at the moment.
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full" asChild>
-                    <a href="/jobs">Browse All Jobs</a>
-                  </Button>
-                </CardFooter>
-              </Card>
+                </Card>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

@@ -9,6 +9,7 @@ import { SkillsSection } from "./skills/SkillsSection";
 import { CertificationsSection } from "./skills/CertificationsSection";
 import { ExperienceSection } from "./skills/ExperienceSection";
 import { EducationSection } from "./skills/EducationSection";
+import { asUUID } from "@/utils/supabaseHelpers";
 
 interface SkillsExpertiseFormProps {
   userId: string;
@@ -39,25 +40,23 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
         const { data, error } = await supabase
           .from('profiles')
           .select('skills, experience, certifications, education')
-          .eq('id', userId as unknown as UUID)
+          .eq('id', asUUID(userId))
           .single();
 
         if (error) throw error;
 
         if (data) {
-          // We now know data has our required properties
-          const profileData = data as ProfileData;
-          
-          setSkills(profileData.skills || []);
-          setExperience(profileData.experience || "");
+          // Process skills data
+          setSkills(data.skills || []);
+          setExperience(data.experience || "");
           
           // Handle certifications data
           let parsedCertifications: Certification[] = [];
-          if (profileData.certifications) {
+          if (data.certifications) {
             try {
-              parsedCertifications = Array.isArray(profileData.certifications) 
-                ? profileData.certifications as Certification[]
-                : JSON.parse(JSON.stringify(profileData.certifications)) as Certification[];
+              parsedCertifications = Array.isArray(data.certifications) 
+                ? data.certifications as Certification[]
+                : JSON.parse(JSON.stringify(data.certifications)) as Certification[];
             } catch (e) {
               console.error("Error parsing certifications:", e);
             }
@@ -66,11 +65,11 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
           
           // Handle education data
           let parsedEducation: Education[] = [];
-          if (profileData.education) {
+          if (data.education) {
             try {
-              parsedEducation = Array.isArray(profileData.education)
-                ? profileData.education as Education[]
-                : JSON.parse(JSON.stringify(profileData.education)) as Education[];
+              parsedEducation = Array.isArray(data.education)
+                ? data.education as Education[]
+                : JSON.parse(JSON.stringify(data.education)) as Education[];
             } catch (e) {
               console.error("Error parsing education:", e);
             }
@@ -95,15 +94,17 @@ export const SkillsExpertiseForm = ({ userId }: SkillsExpertiseFormProps) => {
   const handleSaveChanges = async () => {
     setIsSubmitting(true);
     try {
+      const updateData = {
+        skills,
+        experience,
+        certifications: certifications as unknown as Json,
+        education: education as unknown as Json
+      };
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          skills,
-          experience,
-          certifications: certifications as unknown as Json,
-          education: education as unknown as Json
-        })
-        .eq('id', userId as unknown as UUID);
+        .update(updateData)
+        .eq('id', asUUID(userId));
 
       if (error) throw error;
 

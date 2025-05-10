@@ -1,4 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { asUUID } from "@/utils/supabaseHelpers";
 
 export type Job = {
   id: string;
@@ -25,24 +27,27 @@ export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicatio
   try {
     console.log("Attempting to create job with data:", job);
     
+    // Create a properly formatted insert object
+    const jobInsert = {
+      title: job.title,
+      description: job.description,
+      company: job.company,
+      company_id: asUUID(job.companyId),
+      location: job.location || "",
+      location_type: job.locationType || "Remote",
+      rate: job.rate || "",
+      rate_type: job.rateType || "",
+      duration: job.duration || "",
+      start_date: job.startDate || "",
+      audience: job.audience || "",
+      requirements: Array.isArray(job.requirements) ? job.requirements : [],
+      responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
+      skills: Array.isArray(job.skills) ? job.skills : []
+    };
+    
     const { data, error } = await supabase
-      .from('jobs' as any)
-      .insert({
-        title: job.title,
-        description: job.description,
-        company: job.company,
-        company_id: job.companyId,
-        location: job.location || "",
-        location_type: job.locationType || "Remote",
-        rate: job.rate || "",
-        rate_type: job.rateType || "",
-        duration: job.duration || "",
-        start_date: job.startDate || "",
-        audience: job.audience || "",
-        requirements: Array.isArray(job.requirements) ? job.requirements : [],
-        responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
-        skills: Array.isArray(job.skills) ? job.skills : []
-      })
+      .from('jobs')
+      .insert(jobInsert)
       .select();
     
     if (error) {
@@ -61,11 +66,11 @@ export const createJob = async (job: Omit<Job, "id" | "postedDate" | "applicatio
 export const getJobs = async (isCompany = false, userId?: string) => {
   try {
     let query = supabase
-      .from('jobs' as any)
+      .from('jobs')
       .select('*');
     
     if (isCompany && userId) {
-      query = query.eq("company_id", userId);
+      query = query.eq("company_id", asUUID(userId));
     }
     
     const { data, error } = await query.order("created_at", { ascending: false });
@@ -111,8 +116,8 @@ export const applyForJob = async (jobId: string, coverNote?: string) => {
     const { data: existingApplication, error: checkError } = await supabase
       .from('job_applications')
       .select()
-      .eq('job_id', jobId)
-      .eq('trainer_id', user.id)
+      .eq('job_id', asUUID(jobId))
+      .eq('trainer_id', asUUID(user.id))
       .single();
 
     if (existingApplication) {
@@ -120,15 +125,15 @@ export const applyForJob = async (jobId: string, coverNote?: string) => {
     }
 
     // If no existing application, create a new one
+    const applicationData = {
+      job_id: asUUID(jobId),
+      trainer_id: asUUID(user.id),
+      cover_note: coverNote
+    };
+    
     const { data, error } = await supabase
       .from('job_applications')
-      .insert([
-        {
-          job_id: jobId,
-          trainer_id: user.id,
-          cover_note: coverNote,
-        }
-      ])
+      .insert(applicationData)
       .select()
       .single();
 
@@ -153,8 +158,8 @@ export const cancelJobApplication = async (applicationId: string) => {
     const { data, error } = await supabase
       .from('job_applications')
       .delete()
-      .eq('id', applicationId)
-      .eq('trainer_id', user.id) // Ensure the user can only cancel their own applications
+      .eq('id', asUUID(applicationId))
+      .eq('trainer_id', asUUID(user.id)) // Ensure the user can only cancel their own applications
       .select();
 
     if (error) throw error;
@@ -163,4 +168,4 @@ export const cancelJobApplication = async (applicationId: string) => {
     console.error("Error canceling job application:", error);
     return { success: false, error };
   }
-}
+};

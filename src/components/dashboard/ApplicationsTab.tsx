@@ -20,6 +20,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
+import { asUUID } from "@/utils/supabaseHelpers";
 
 interface ActivityProps {
   id: string;
@@ -64,7 +65,7 @@ export const ApplicationsTab = ({ loading, activities, jobsData }: ApplicationsT
       const { error } = await supabase
         .from('job_applications')
         .delete()
-        .eq('id', applicationId as unknown as UUID);
+        .eq('id', asUUID(applicationId));
       
       if (error) throw error;
       

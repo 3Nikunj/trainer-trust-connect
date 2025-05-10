@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileData, TrainerProfile, CompanyProfile, Education } from "@/types/profile";
 import { mockTrainerProfile, mockCompanyProfile } from "@/data/mockProfiles";
+import { asUUID } from "@/utils/supabaseHelpers";
 
 // Define interfaces to help with type safety
 interface ProfileResponse {
@@ -37,14 +38,14 @@ export const useProfileData = (id: string | undefined, currentUserRole?: string)
           const { data: profileData, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', id as unknown as UUID)
+            .eq('id', asUUID(id))
             .single();
             
           if (error) {
             console.error('Error fetching profile:', error);
             // If there's an error, we'll fall back to mock data below
           } else if (profileData) {
-            // We found a profile, now let's cast it to our interface to ensure type safety
+            // We found a profile, now handle the data safely
             const profile = profileData as ProfileResponse;
             
             // Build the appropriate object based on role
