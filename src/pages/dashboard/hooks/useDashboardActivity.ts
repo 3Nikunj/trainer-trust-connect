@@ -31,7 +31,7 @@ export const useDashboardActivity = (user: UserProps, isCompany: boolean) => {
 
         if (isCompany) {
           // For companies, show recent applications to their job listings
-          const { data: applications } = await supabase
+          const { data: applications, error } = await supabase
             .from('job_applications')
             .select(`
               id,
@@ -46,7 +46,12 @@ export const useDashboardActivity = (user: UserProps, isCompany: boolean) => {
             .order('created_at', { ascending: false })
             .limit(5);
 
-          if (applications) {
+          if (error) {
+            console.error('Error fetching company applications:', error);
+            return;
+          }
+
+          if (applications && applications.length > 0) {
             activity = applications.map((app: any) => ({
               id: app.id,
               title: `${app.profiles.full_name} applied to "${app.jobs.title}"`,
@@ -59,7 +64,7 @@ export const useDashboardActivity = (user: UserProps, isCompany: boolean) => {
           }
         } else {
           // For trainers, show their job applications
-          const { data: applications } = await supabase
+          const { data: applications, error } = await supabase
             .from('job_applications')
             .select(`
               id,
@@ -71,7 +76,12 @@ export const useDashboardActivity = (user: UserProps, isCompany: boolean) => {
             .order('created_at', { ascending: false })
             .limit(5);
 
-          if (applications) {
+          if (error) {
+            console.error('Error fetching trainer applications:', error);
+            return;
+          }
+
+          if (applications && applications.length > 0) {
             activity = applications.map((app: any) => ({
               id: app.id,
               title: `You applied to "${app.jobs.title}" at ${app.jobs.company}`,

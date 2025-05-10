@@ -41,7 +41,7 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
   const { jobApplicants } = useJobApplicants(selectedJobId, isCompany);
   
   // Get dashboard stats and activity
-  const { stats, loading } = useDashboardStats(user, isCompany);
+  const { stats, loading: statsLoading } = useDashboardStats(user, isCompany);
   const { recentActivity } = useDashboardActivity(user, isCompany);
   
   // Get performance data
@@ -51,15 +51,6 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
   const handleJobSelect = (jobId: string) => {
     setSelectedJobId(jobId === selectedJobId ? null : jobId);
   };
-
-  // Ensure activities are properly formatted for display
-  // This helps prevent DOM nesting issues
-  const safeActivities = recentActivity.map(activity => ({
-    ...activity,
-    // Ensure these are strings, not complex elements that might cause nesting issues
-    title: typeof activity.title === 'string' ? activity.title : String(activity.title),
-    status: typeof activity.status === 'string' ? activity.status : String(activity.status)
-  }));
 
   return (
     <Tabs defaultValue="overview" className="space-y-4">
@@ -87,16 +78,17 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
           isCompany={isCompany}
         />
         <RecentActivity 
-          activities={safeActivities}
+          activities={recentActivity}
           isCompany={isCompany}
           jobsData={jobsData}
+          loading={statsLoading}
         />
       </TabsContent>
       
       <TabsContent value="applications">
         <ApplicationsTab 
-          loading={loading}
-          activities={safeActivities} 
+          loading={statsLoading}
+          activities={recentActivity} 
           jobsData={jobsData}
         />
       </TabsContent>
@@ -107,7 +99,7 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
 
       <TabsContent value="jobs">
         <JobListingsTab 
-          loading={loading}
+          loading={statsLoading}
           jobsData={jobsData || []}
           jobApplicants={jobApplicants}
           selectedJobId={selectedJobId}
@@ -117,8 +109,8 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
       
       <TabsContent value="applicants">
         <ApplicantsTab 
-          loading={loading}
-          activities={safeActivities}
+          loading={statsLoading}
+          activities={recentActivity}
         />
       </TabsContent>
     </Tabs>
