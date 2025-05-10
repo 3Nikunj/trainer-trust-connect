@@ -52,6 +52,15 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
     setSelectedJobId(jobId === selectedJobId ? null : jobId);
   };
 
+  // Ensure activities are properly formatted for display
+  // This helps prevent DOM nesting issues
+  const safeActivities = recentActivity.map(activity => ({
+    ...activity,
+    // Ensure these are strings, not complex elements that might cause nesting issues
+    title: typeof activity.title === 'string' ? activity.title : String(activity.title),
+    status: typeof activity.status === 'string' ? activity.status : String(activity.status)
+  }));
+
   return (
     <Tabs defaultValue="overview" className="space-y-4">
       <TabsList>
@@ -78,7 +87,7 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
           isCompany={isCompany}
         />
         <RecentActivity 
-          activities={recentActivity}
+          activities={safeActivities}
           isCompany={isCompany}
           jobsData={jobsData}
         />
@@ -87,7 +96,7 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
       <TabsContent value="applications">
         <ApplicationsTab 
           loading={loading}
-          activities={recentActivity}
+          activities={safeActivities} 
           jobsData={jobsData}
         />
       </TabsContent>
@@ -109,7 +118,7 @@ export const DashboardTabs = ({ user }: { user: UserProps }) => {
       <TabsContent value="applicants">
         <ApplicantsTab 
           loading={loading}
-          activities={recentActivity}
+          activities={safeActivities}
         />
       </TabsContent>
     </Tabs>
