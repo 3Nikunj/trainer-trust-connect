@@ -44,13 +44,28 @@ export function UserNav() {
     );
   }
 
+  // Create a fallback initial for avatar
+  const userInitials = user.name 
+    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : user.email?.substring(0, 2).toUpperCase() || 'U';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
-            <AvatarFallback>{user.name ? user.name.slice(0, 2).toUpperCase() : "U"}</AvatarFallback>
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
+          <Avatar className="h-10 w-10 border border-muted">
+            {user.avatar ? (
+              <AvatarImage 
+                src={user.avatar} 
+                alt={user.name || "User avatar"} 
+                className="object-cover"
+                onError={(e) => {
+                  // If image fails to load, we'll show fallback
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : null}
+            <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>

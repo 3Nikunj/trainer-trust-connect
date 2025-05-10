@@ -49,26 +49,44 @@ const App = () => {
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          name: session.user.user_metadata.full_name || session.user.email!,
-          role: session.user.user_metadata.role || "trainer",
-          profileComplete: true,
-        });
+        // Fetch the user's profile data to get avatar URL
+        supabase
+          .from('profiles')
+          .select('avatar_url, full_name')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              name: profile?.full_name || session.user.user_metadata.full_name || session.user.email!,
+              role: session.user.user_metadata.role || "trainer",
+              profileComplete: true,
+              avatar: profile?.avatar_url || undefined,
+            });
+          });
       }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          name: session.user.user_metadata.full_name || session.user.email!,
-          role: session.user.user_metadata.role || "trainer",
-          profileComplete: true,
-        });
+        // Fetch profile data when auth state changes too
+        supabase
+          .from('profiles')
+          .select('avatar_url, full_name')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              name: profile?.full_name || session.user.user_metadata.full_name || session.user.email!,
+              role: session.user.user_metadata.role || "trainer",
+              profileComplete: true,
+              avatar: profile?.avatar_url || undefined,
+            });
+          });
       } else {
         setUser(null);
       }
