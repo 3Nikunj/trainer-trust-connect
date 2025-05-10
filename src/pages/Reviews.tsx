@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { asUUID, getReviewCategories, getReviewCategoryFields, getCategoryDescription } from "@/utils/supabaseHelpers";
 
 // Rating stars component
 const RatingStars = ({ rating, onRatingChange }: { rating: number, onRatingChange?: (rating: number) => void }) => {
@@ -58,10 +59,11 @@ const RatingStars = ({ rating, onRatingChange }: { rating: number, onRatingChang
 };
 
 // Types
-type Company = {
+type Profile = {
   id: string;
-  name: string;
+  full_name: string;
   role: string;
+  avatar_url?: string;
 };
 
 type Review = {
@@ -72,16 +74,7 @@ type Review = {
   rating: number;
   review: string;
   created_at: string;
-  categories?: {
-    communication?: number;
-    requirements?: number;
-    support?: number;
-    professionalism?: number;
-    payment?: number;
-    expertise?: number;
-    curriculum?: number;
-    delivery?: number;
-  };
+  categories?: Record<string, number>;
   reviewerName?: string;
   revieweeName?: string;
   reviewerAvatar?: string;
@@ -90,81 +83,68 @@ type Review = {
 
 // Review form type
 type ReviewFormValues = {
-  companyId: string;
+  revieweeId: string;
   jobTitle: string;
   review: string;
   rating: number;
-  categories: {
-    communication: number;
-    requirements: number;
-    support: number;
-    professionalism: number;
-    payment: number;
-  };
+  categories: Record<string, number>;
 };
 
 const Reviews = () => {
   const { user } = useContext(UserContext);
   const [activeTab, setActiveTab] = useState("received");
-  const [selectedCompany, setSelectedCompany] = useState("");
+  const [selectedReviewee, setSelectedReviewee] = useState("");
   const [formRating, setFormRating] = useState(0);
-  const [formCategories, setFormCategories] = useState({
-    communication: 0,
-    requirements: 0,
-    support: 0,
-    professionalism: 0,
-    payment: 0,
-  });
+  const [formCategories, setFormCategories] = useState<Record<string, number>>(
+    getReviewCategories(user?.role)
+  );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const form = useForm<ReviewFormValues>({
     defaultValues: {
-      companyId: "",
+      revieweeId: "",
       jobTitle: "",
       review: "",
       rating: 0,
-      categories: {
-        communication: 0,
-        requirements: 0,
-        support: 0,
-        professionalism: 0,
-        payment: 0,
-      },
+      categories: getReviewCategories(user?.role),
     },
   });
+  
+  // Update form categories when user role changes
+  useEffect(() => {
+    if (user) {
+      setFormCategories(getReviewCategories(user.role));
+      form.setValue('categories', getReviewCategories(user.role));
+    }
+  }, [user, form]);
   
   if (!user) {
     return <Navigate to="/login" />;
   }
 
-  // Fetch registered companies from the profiles table instead of using the RPC function
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
-    queryKey: ['companies'],
+  const isCompany = user.role === 'company';
+  const targetRole = isCompany ? 'trainer' : 'company';
+  
+  // Fetch potential reviewees (trainers for companies, companies for trainers)
+  const { data: potentialReviewees = [], isLoading: isLoadingProfiles } = useQuery({
+    queryKey: ['profiles', targetRole],
     queryFn: async () => {
-      console.log('Fetching companies from profiles table...');
+      console.log(`Fetching ${targetRole} profiles...`);
       
-      // Get company users from the profiles table with role='company'
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, role')
-        .eq('role', 'company');
+        .select('id, full_name, role, avatar_url')
+        .eq('role', targetRole);
       
       if (error) {
-        console.error('Error fetching companies from profiles:', error);
+        console.error(`Error fetching ${targetRole} profiles:`, error);
         throw new Error(error.message);
       }
       
-      // Transform the data to match our Company type
-      const companiesData = data.map(profile => ({
-        id: profile.id,
-        name: profile.full_name || 'Unnamed Company',
-        role: profile.role
-      }));
-      
-      console.log('Companies fetched from profiles:', companiesData);
-      return companiesData as Company[];
+      console.log(`${targetRole} profiles fetched:`, data);
+      return data as Profile[];
     },
   });
 
@@ -175,7 +155,7 @@ const Reviews = () => {
       const { data: reviews, error } = await supabase
         .from('reviews')
         .select('*')
-        .eq('reviewee_id', user.id);
+        .eq('reviewee_id', asUUID(user.id));
       
       if (error) {
         console.error('Error fetching received reviews:', error);
@@ -192,17 +172,41 @@ const Reviews = () => {
             .eq('id', review.reviewer_id)
             .single();
 
+          const categories: Record<string, number> = {};
+          
+          // Load the appropriate category ratings based on reviewer role
+          if (review.reviewer_id !== user.id) {
+            const { data: reviewerProfile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', review.reviewer_id)
+              .single();
+              
+            const reviewerRole = reviewerProfile?.role;
+            
+            // Populate categories based on reviewer role
+            if (reviewerRole === 'company') {
+              // Company reviewing a trainer
+              categories.expertise = review.rating_expertise || 0;
+              categories.communication = review.rating_communication || 0;
+              categories.professionalism = review.rating_professionalism || 0;
+              categories.curriculum = review.rating_curriculum || 0;
+              categories.delivery = review.rating_delivery || 0;
+            } else {
+              // Trainer reviewing a company
+              categories.communication = review.rating_communication || 0;
+              categories.requirements = review.rating_requirements || 0;
+              categories.support = review.rating_support || 0;
+              categories.professionalism = review.rating_professionalism || 0;
+              categories.payment = review.rating_payment || 0;
+            }
+          }
+
           return {
             ...review,
             reviewerName: reviewerData?.full_name || 'Unknown User',
             reviewerAvatar: reviewerData?.avatar_url || '/placeholder.svg',
-            categories: {
-              expertise: review.rating_expertise,
-              communication: review.rating_communication,
-              professionalism: review.rating_professionalism,
-              curriculum: review.rating_curriculum,
-              delivery: review.rating_delivery,
-            }
+            categories
           };
         })
       );
@@ -218,7 +222,7 @@ const Reviews = () => {
       const { data: reviews, error } = await supabase
         .from('reviews')
         .select('*')
-        .eq('reviewer_id', user.id);
+        .eq('reviewer_id', asUUID(user.id));
       
       if (error) {
         console.error('Error fetching given reviews:', error);
@@ -234,18 +238,31 @@ const Reviews = () => {
             .select('full_name, avatar_url')
             .eq('id', review.reviewee_id)
             .single();
+            
+          const categories: Record<string, number> = {};
+          
+          // Populate categories based on user's role (the reviewer)
+          if (isCompany) {
+            // Company reviewing a trainer
+            categories.expertise = review.rating_expertise || 0;
+            categories.communication = review.rating_communication || 0;
+            categories.professionalism = review.rating_professionalism || 0;
+            categories.curriculum = review.rating_curriculum || 0;
+            categories.delivery = review.rating_delivery || 0;
+          } else {
+            // Trainer reviewing a company
+            categories.communication = review.rating_communication || 0;
+            categories.requirements = review.rating_requirements || 0;
+            categories.support = review.rating_support || 0;
+            categories.professionalism = review.rating_professionalism || 0;
+            categories.payment = review.rating_payment || 0;
+          }
 
           return {
             ...review,
             revieweeName: revieweeData?.full_name || 'Unknown User',
             revieweeAvatar: revieweeData?.avatar_url || '/placeholder.svg',
-            categories: {
-              communication: review.rating_communication,
-              requirements: review.rating_requirements,
-              support: review.rating_support,
-              professionalism: review.rating_professionalism,
-              payment: review.rating_payment,
-            }
+            categories
           };
         })
       );
@@ -261,16 +278,19 @@ const Reviews = () => {
       job_title: string;
       rating: number;
       review: string;
-      rating_communication: number;
-      rating_requirements: number;
-      rating_support: number;
-      rating_professionalism: number;
-      rating_payment: number;
+      rating_communication?: number;
+      rating_requirements?: number;
+      rating_support?: number;
+      rating_professionalism?: number;
+      rating_payment?: number;
+      rating_expertise?: number;
+      rating_curriculum?: number;
+      rating_delivery?: number;
     }) => {
       const { error } = await supabase
         .from('reviews')
         .insert([{
-          reviewer_id: user.id,
+          reviewer_id: asUUID(user.id),
           ...reviewData
         }]);
       
@@ -288,13 +308,7 @@ const Reviews = () => {
       // Reset form
       form.reset();
       setFormRating(0);
-      setFormCategories({
-        communication: 0,
-        requirements: 0,
-        support: 0,
-        professionalism: 0,
-        payment: 0,
-      });
+      setFormCategories(getReviewCategories(user.role));
     },
     onError: (error) => {
       toast({
@@ -313,30 +327,44 @@ const Reviews = () => {
   };
 
   const handleSubmitReview = (values: ReviewFormValues) => {
-    const selectedCompanyName = companies.find(
-      (company) => company.id === values.companyId
-    )?.name;
+    const selectedName = potentialReviewees.find(
+      (profile) => profile.id === values.revieweeId
+    )?.full_name;
 
-    if (!selectedCompanyName) {
+    if (!selectedName) {
       toast({
         title: "Error",
-        description: "Please select a valid company",
+        description: `Please select a valid ${targetRole}`,
         variant: "destructive",
       });
       return;
     }
 
-    createReviewMutation.mutate({
-      reviewee_id: values.companyId,
+    const reviewData: any = {
+      reviewee_id: asUUID(values.revieweeId),
       job_title: values.jobTitle,
       rating: formRating,
       review: values.review,
-      rating_communication: formCategories.communication,
-      rating_requirements: formCategories.requirements,
-      rating_support: formCategories.support,
-      rating_professionalism: formCategories.professionalism,
-      rating_payment: formCategories.payment,
-    });
+    };
+    
+    // Add category ratings based on user role
+    if (isCompany) {
+      // Company reviewing trainer
+      reviewData.rating_expertise = formCategories.expertise;
+      reviewData.rating_communication = formCategories.communication;
+      reviewData.rating_professionalism = formCategories.professionalism;
+      reviewData.rating_curriculum = formCategories.curriculum;
+      reviewData.rating_delivery = formCategories.delivery;
+    } else {
+      // Trainer reviewing company
+      reviewData.rating_communication = formCategories.communication;
+      reviewData.rating_requirements = formCategories.requirements;
+      reviewData.rating_support = formCategories.support;
+      reviewData.rating_professionalism = formCategories.professionalism;
+      reviewData.rating_payment = formCategories.payment;
+    }
+
+    createReviewMutation.mutate(reviewData);
   };
 
   // Calculate overall rating from received reviews
@@ -349,11 +377,13 @@ const Reviews = () => {
 
   const overallRating = calculateOverallRating();
 
-  // Add helper to debug companies dropdown
-  const debugCompanies = () => {
-    console.log("Companies in state:", companies);
-    console.log("Loading state:", isLoadingCompanies);
+  // Debug helper
+  const debugProfiles = () => {
+    console.log("Profiles in state:", potentialReviewees);
+    console.log("Loading state:", isLoadingProfiles);
   };
+
+  const categoryFields = getReviewCategoryFields(user.role);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -375,163 +405,164 @@ const Reviews = () => {
               </p>
             </div>
             
-            {/* Add Review Button (only visible for trainers) */}
-            {user.role === "trainer" && (
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-brand-600 hover:bg-brand-700">
-                    Give Review to Company
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[625px]">
-                  <DialogHeader>
-                    <DialogTitle>Submit a Review</DialogTitle>
-                    <DialogDescription>
-                      Share your experience working with this company. Your feedback helps other trainers.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmitReview)} className="space-y-6 py-4">
-                      <FormField
-                        control={form.control}
-                        name="companyId"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Select Company</FormLabel>
-                            <Select
-                              value={field.value}
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                setSelectedCompany(value);
-                              }}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select a company to review" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {isLoadingCompanies ? (
-                                  <SelectItem value="loading" disabled>Loading companies...</SelectItem>
-                                ) : companies && companies.length > 0 ? (
-                                  companies.map((company) => (
-                                    <SelectItem key={company.id} value={company.id}>
-                                      {company.name}
-                                    </SelectItem>
-                                  ))
-                                ) : (
-                                  <SelectItem value="none" disabled>No companies registered</SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
-                            {/* Debug button */}
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button 
-                                  type="button" 
-                                  onClick={debugCompanies} 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="mt-2 w-fit self-end"
-                                >
-                                  <Info className="h-4 w-4 mr-1" />
-                                  Debug Info
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-96">
-                                <div className="space-y-2">
-                                  <p className="font-semibold">Companies Data:</p>
-                                  <pre className="bg-muted p-2 rounded text-xs overflow-auto max-h-48">
-                                    {JSON.stringify(companies, null, 2)}
-                                  </pre>
-                                  <p>Loading: {isLoadingCompanies ? "Yes" : "No"}</p>
-                                  <p>Companies Count: {companies?.length || 0}</p>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="jobTitle"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Job Title or Workshop</FormLabel>
-                            <FormControl>
-                              <input
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                placeholder="e.g. React Advanced Workshop Trainer"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="space-y-2">
-                        <FormLabel>Overall Rating</FormLabel>
-                        <div className="flex items-center gap-2">
-                          <RatingStars rating={formRating} onRatingChange={setFormRating} />
-                          {formRating > 0 && <span className="font-semibold">{formRating}.0</span>}
-                        </div>
+            {/* Add Review Button */}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-brand-600 hover:bg-brand-700">
+                  {isCompany ? 'Give Review to Trainer' : 'Give Review to Company'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[625px]">
+                <DialogHeader>
+                  <DialogTitle>Submit a Review</DialogTitle>
+                  <DialogDescription>
+                    Share your experience working with this {targetRole}. Your feedback helps others.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleSubmitReview)} className="space-y-6 py-4">
+                    <FormField
+                      control={form.control}
+                      name="revieweeId"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Select {targetRole}</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setSelectedReviewee(value);
+                            }}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder={`Select a ${targetRole} to review`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {isLoadingProfiles ? (
+                                <SelectItem value="loading" disabled>Loading profiles...</SelectItem>
+                              ) : potentialReviewees && potentialReviewees.length > 0 ? (
+                                potentialReviewees.map((profile) => (
+                                  <SelectItem key={profile.id} value={profile.id}>
+                                    {profile.full_name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="none" disabled>No {targetRole}s registered</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {/* Debug button */}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button 
+                                type="button" 
+                                onClick={debugProfiles} 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-2 w-fit self-end"
+                              >
+                                <Info className="h-4 w-4 mr-1" />
+                                Debug Info
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-96">
+                              <div className="space-y-2">
+                                <p className="font-semibold">Profiles Data:</p>
+                                <pre className="bg-muted p-2 rounded text-xs overflow-auto max-h-48">
+                                  {JSON.stringify(potentialReviewees, null, 2)}
+                                </pre>
+                                <p>Loading: {isLoadingProfiles ? "Yes" : "No"}</p>
+                                <p>Profiles Count: {potentialReviewees?.length || 0}</p>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="jobTitle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Job Title or Workshop</FormLabel>
+                          <FormControl>
+                            <input
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder={`e.g. ${isCompany ? 'React Workshop Trainer' : 'Corporate Training Project'}`}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="space-y-2">
+                      <FormLabel>Overall Rating</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <RatingStars rating={formRating} onRatingChange={setFormRating} />
+                        {formRating > 0 && <span className="font-semibold">{formRating}.0</span>}
                       </div>
-                      
-                      <div className="space-y-4">
-                        <FormLabel>Rate Your Experience</FormLabel>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {Object.keys(formCategories).map((category) => (
-                            <div key={category} className="space-y-2 bg-muted/40 p-3 rounded-md">
-                              <p className="capitalize text-sm">{category}</p>
-                              <RatingStars
-                                rating={formCategories[category as keyof typeof formCategories]}
-                                onRatingChange={(rating) => handleCategoryRatingChange(category, rating)}
-                              />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <FormLabel>Rate Your Experience</FormLabel>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {categoryFields.map((category) => (
+                          <div key={category} className="space-y-2 bg-muted/40 p-3 rounded-md">
+                            <div className="flex flex-col">
+                              <p className="capitalize text-sm font-medium">{category}</p>
+                              <p className="text-xs text-muted-foreground">{getCategoryDescription(category)}</p>
                             </div>
-                          ))}
-                        </div>
+                            <RatingStars
+                              rating={formCategories[category] || 0}
+                              onRatingChange={(rating) => handleCategoryRatingChange(category, rating)}
+                            />
+                          </div>
+                        ))}
                       </div>
-                      
-                      <FormField
-                        control={form.control}
-                        name="review"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Review</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Share your experience working with this company..."
-                                className="min-h-[120px]"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <DialogFooter>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => setIsDialogOpen(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button 
-                          type="submit"
-                          className="bg-brand-600 hover:bg-brand-700"
-                          disabled={!selectedCompany || formRating === 0 || createReviewMutation.isPending}
-                        >
-                          {createReviewMutation.isPending ? "Submitting..." : "Submit Review"}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            )}
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="review"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Review</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder={`Share your experience working with this ${targetRole}...`}
+                              className="min-h-[120px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setIsDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit"
+                        className="bg-brand-600 hover:bg-brand-700"
+                        disabled={!selectedReviewee || formRating === 0 || createReviewMutation.isPending}
+                      >
+                        {createReviewMutation.isPending ? "Submitting..." : "Submit Review"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <Tabs
@@ -599,7 +630,10 @@ const Reviews = () => {
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
                         {review.categories && Object.entries(review.categories).filter(([, value]) => value).map(([key, value]) => (
                           <div key={key} className="bg-muted/40 p-2 rounded-md text-center">
-                            <p className="capitalize mb-1">{key}</p>
+                            <div className="mb-1">
+                              <p className="capitalize">{key}</p>
+                              <p className="text-[10px] text-muted-foreground">{getCategoryDescription(key)}</p>
+                            </div>
                             <RatingStars rating={value || 0} />
                           </div>
                         ))}
@@ -679,7 +713,10 @@ const Reviews = () => {
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
                         {review.categories && Object.entries(review.categories).filter(([, value]) => value).map(([key, value]) => (
                           <div key={key} className="bg-muted/40 p-2 rounded-md text-center">
-                            <p className="capitalize mb-1">{key}</p>
+                            <div className="mb-1">
+                              <p className="capitalize">{key}</p>
+                              <p className="text-[10px] text-muted-foreground">{getCategoryDescription(key)}</p>
+                            </div>
                             <RatingStars rating={value || 0} />
                           </div>
                         ))}

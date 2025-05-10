@@ -28,6 +28,7 @@ export type Review = {
   date: string;
   content: string;
   avatar?: string;
+  categories?: Record<string, number>;
 };
 
 export type Certification = {
